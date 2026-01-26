@@ -39,7 +39,7 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            var returnUrl = input.ReturnUrl ?? "/";
+            var returnUrl = input.ReturnUrl ?? "/member/dashboard";
             return LocalRedirect(returnUrl);
         }
 
