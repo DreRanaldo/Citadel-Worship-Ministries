@@ -82,8 +82,7 @@ public class AccountController : Controller
         return Redirect($"/account/register?error={Uri.EscapeDataString(errors)}");
     }
 
-    [HttpPost("logout")]
-    [ValidateAntiForgeryToken]
+    [HttpGet("logout")]
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
