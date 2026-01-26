@@ -55,19 +55,19 @@ else
                                 <div class="btn-group btn-group-sm">
                                     @if (!user.Roles.Contains("Admin"))
                                     {
-                                        <button class="btn btn-outline-danger" title="Make Admin" @onclick="() => AssignRole(user.Id, \"Admin\")">
+                                        <button class="btn btn-outline-danger" title="Make Admin" @onclick="@(() => AssignRole(user.Id, RoleAdmin))">
                                             <i class="bi bi-shield-plus"></i>
                                         </button>
                                     }
                                     else if (user.Roles.Contains("Admin") && user.Roles.Contains("Member"))
                                     {
-                                        <button class="btn btn-outline-warning" title="Remove Admin" @onclick="() => RemoveRole(user.Id, \"Admin\")">
+                                        <button class="btn btn-outline-warning" title="Remove Admin" @onclick="@(() => RemoveRole(user.Id, RoleAdmin))">
                                             <i class="bi bi-shield-minus"></i>
                                         </button>
                                     }
                                     @if (!user.Roles.Contains("Member"))
                                     {
-                                        <button class="btn btn-outline-primary" title="Make Member" @onclick="() => AssignRole(user.Id, \"Member\")">
+                                        <button class="btn btn-outline-primary" title="Make Member" @onclick="@(() => AssignRole(user.Id, RoleMember))">
                                             <i class="bi bi-person-plus"></i>
                                         </button>
                                     }
@@ -94,6 +94,8 @@ else
 }
 
 @code {
+    private const string RoleAdmin = "Admin";
+    private const string RoleMember = "Member";
     private List<UserDto>? _users;
     private string? _message;
     private bool _messageIsError;

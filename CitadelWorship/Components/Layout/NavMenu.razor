@@ -45,13 +45,13 @@
                                 <i class="bi bi-person-circle"></i> @context.User.Identity?.Name
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <AuthorizeView Roles="Member,Admin">
+                                <AuthorizeView Roles="Member,Admin" Context="memberContext">
                                     <Authorized>
                                         <li><a class="dropdown-item" href="/member/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                     </Authorized>
                                 </AuthorizeView>
-                                <AuthorizeView Roles="Admin">
+                                <AuthorizeView Roles="Admin" Context="adminContext">
                                     <Authorized>
                                         <li><a class="dropdown-item" href="/admin/dashboard"><i class="bi bi-gear"></i> Admin Panel</a></li>
                                         <li><hr class="dropdown-divider"></li>
