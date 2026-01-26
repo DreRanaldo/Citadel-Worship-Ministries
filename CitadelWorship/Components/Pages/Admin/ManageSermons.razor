@@ -1,0 +1,83 @@
+@page "/admin/sermons"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ISermonService SermonService
+
+<PageTitle>Manage Sermons - Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-book"></i> Manage Sermons</h2>
+    <a href="/admin/sermons/edit/0" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Sermon
+    </a>
+</div>
+
+@if (_sermons == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Speaker</th>
+                        <th>Date</th>
+                        <th>Series</th>
+                        <th>Published</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sermon in _sermons)
+                    {
+                        <tr>
+                            <td>@sermon.Title</td>
+                            <td>@sermon.Speaker</td>
+                            <td>@sermon.DatePreached.ToString("MMM d, yyyy")</td>
+                            <td>@sermon.Series</td>
+                            <td>
+                                @if (sermon.IsPublished)
+                                {
+                                    <span class="badge bg-success">Published</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Draft</span>
+                                }
+                            </td>
+                            <td>
+                                <a href="/admin/sermons/edit/@sermon.Id" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSermon(sermon.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Sermon>? _sermons;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sermons = await SermonService.GetAllAsync();
+    }
+
+    private async Task DeleteSermon(int id)
+    {
+        await SermonService.DeleteAsync(id);
+        _sermons = await SermonService.GetAllAsync();
+    }
+}

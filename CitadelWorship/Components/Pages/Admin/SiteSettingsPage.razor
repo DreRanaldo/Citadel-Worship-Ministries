@@ -1,0 +1,171 @@
+@page "/admin/settings"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ISiteSettingsService SettingsService
+
+<PageTitle>Site Settings - Admin</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-gear"></i> Site Settings</h2>
+
+@if (_settings == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    @if (_saved)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle"></i> Settings saved successfully!
+            <button type="button" class="btn-close" @onclick="() => _saved = false"></button>
+        </div>
+    }
+
+    <EditForm Model="_settings" OnValidSubmit="HandleSubmit" FormName="SiteSettingsForm">
+        <DataAnnotationsValidator />
+
+        <div class="row g-4">
+            <!-- General Info -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">General Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Church Name</label>
+                            <InputText class="form-control" @bind-Value="_settings.ChurchName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tagline</label>
+                            <InputText class="form-control" @bind-Value="_settings.Tagline" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hero Scripture</label>
+                            <InputTextArea class="form-control" @bind-Value="_settings.HeroScripture" rows="3" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hero Image URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.HeroImageUrl" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Contact Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <InputText class="form-control" @bind-Value="_settings.Address" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <InputText class="form-control" @bind-Value="_settings.Phone" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText class="form-control" @bind-Value="_settings.Email" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Times -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Service Times</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Sunday Services</label>
+                            <InputText class="form-control" @bind-Value="_settings.SundayServiceTimes" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Wednesday Services</label>
+                            <InputText class="form-control" @bind-Value="_settings.WednesdayServiceTimes" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Friday Services</label>
+                            <InputText class="form-control" @bind-Value="_settings.FridayServiceTimes" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Media & Links -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Social Media & Links</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-facebook"></i> Facebook URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.FacebookUrl" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-youtube"></i> YouTube URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.YouTubeUrl" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-instagram"></i> Instagram URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.InstagramUrl" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-broadcast"></i> Live Stream URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.LiveStreamUrl" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-heart"></i> Donation URL</label>
+                            <InputText class="form-control" @bind-Value="_settings.DonationUrl" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                <i class="bi bi-check-lg"></i> Save Settings
+            </button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private SiteSettings? _settings;
+    private bool _saving = false;
+    private bool _saved = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_settings == null) return;
+        _saving = true;
+        try
+        {
+            await SettingsService.UpdateAsync(_settings);
+            _saved = true;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

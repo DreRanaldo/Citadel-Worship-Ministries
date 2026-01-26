@@ -1,0 +1,142 @@
+@page "/admin/prayer-requests"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IPrayerRequestService PrayerRequestService
+
+<PageTitle>Manage Prayer Requests - Admin</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-chat-heart"></i> Prayer Requests</h2>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link @(_filter == "all" ? "active" : "")" @onclick='() => SetFilter("all")'>
+            All (@(_requests?.Count ?? 0))
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(_filter == "new" ? "active" : "")" @onclick='() => SetFilter("new")'>
+            New (@(_requests?.Count(r => r.Status == PrayerRequestStatus.New) ?? 0))
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(_filter == "prayed" ? "active" : "")" @onclick='() => SetFilter("prayed")'>
+            Prayed (@(_requests?.Count(r => r.Status == PrayerRequestStatus.Prayed) ?? 0))
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(_filter == "archived" ? "active" : "")" @onclick='() => SetFilter("archived")'>
+            Archived (@(_requests?.Count(r => r.Status == PrayerRequestStatus.Archived) ?? 0))
+        </button>
+    </li>
+</ul>
+
+@if (_requests == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    var filtered = GetFilteredRequests();
+    if (!filtered.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-chat-heart fs-1"></i>
+            <p class="mt-3">No prayer requests in this category.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var request in filtered)
+        {
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">@request.Title</h5>
+                            <p class="text-muted small mb-2">
+                                Submitted by @(request.IsAnonymous ? "Anonymous" : request.SubmittedByUser?.FullName ?? "Unknown")
+                                on @request.SubmittedAt.ToString("MMM d, yyyy h:mm tt")
+                            </p>
+                            <p class="mb-0">@request.Description</p>
+                        </div>
+                        <span class="badge @GetStatusBadge(request.Status) fs-6">@request.Status</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex gap-2">
+                        @if (request.Status != PrayerRequestStatus.New)
+                        {
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => UpdateStatus(request.Id, PrayerRequestStatus.New)">
+                                Mark as New
+                            </button>
+                        }
+                        @if (request.Status != PrayerRequestStatus.Prayed)
+                        {
+                            <button class="btn btn-sm btn-outline-success" @onclick="() => UpdateStatus(request.Id, PrayerRequestStatus.Prayed)">
+                                <i class="bi bi-check-circle"></i> Mark as Prayed
+                            </button>
+                        }
+                        @if (request.Status != PrayerRequestStatus.Archived)
+                        {
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => UpdateStatus(request.Id, PrayerRequestStatus.Archived)">
+                                <i class="bi bi-archive"></i> Archive
+                            </button>
+                        }
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(request.Id)">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    private List<PrayerRequest>? _requests;
+    private string _filter = "all";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _requests = await PrayerRequestService.GetAllAsync();
+    }
+
+    private void SetFilter(string filter)
+    {
+        _filter = filter;
+    }
+
+    private List<PrayerRequest> GetFilteredRequests()
+    {
+        if (_requests == null) return new();
+        return _filter switch
+        {
+            "new" => _requests.Where(r => r.Status == PrayerRequestStatus.New).ToList(),
+            "prayed" => _requests.Where(r => r.Status == PrayerRequestStatus.Prayed).ToList(),
+            "archived" => _requests.Where(r => r.Status == PrayerRequestStatus.Archived).ToList(),
+            _ => _requests
+        };
+    }
+
+    private async Task UpdateStatus(int id, PrayerRequestStatus status)
+    {
+        await PrayerRequestService.UpdateStatusAsync(id, status);
+        _requests = await PrayerRequestService.GetAllAsync();
+    }
+
+    private async Task Delete(int id)
+    {
+        await PrayerRequestService.DeleteAsync(id);
+        _requests = await PrayerRequestService.GetAllAsync();
+    }
+
+    private string GetStatusBadge(PrayerRequestStatus status) => status switch
+    {
+        PrayerRequestStatus.New => "bg-primary",
+        PrayerRequestStatus.Prayed => "bg-success",
+        PrayerRequestStatus.Archived => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

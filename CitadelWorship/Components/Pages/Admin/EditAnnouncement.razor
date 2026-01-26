@@ -1,0 +1,119 @@
+@page "/admin/announcements/edit/{Id:int}"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IAnnouncementService AnnouncementService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isNew ? "Add" : "Edit") Announcement - Admin</PageTitle>
+
+<h2>@(_isNew ? "Add New" : "Edit") Announcement</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <EditForm Model="_announcement" OnValidSubmit="HandleSubmit" FormName="EditAnnouncementForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_announcement.Title" />
+                        <ValidationMessage For="() => _announcement.Title" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Content <span class="text-danger">*</span></label>
+                        <InputTextArea class="form-control" @bind-Value="_announcement.Content" rows="6" />
+                        <ValidationMessage For="() => _announcement.Content" class="text-danger" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Category</label>
+                            <InputText class="form-control" @bind-Value="_announcement.Category" placeholder="e.g., General, Events" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Publish Date</label>
+                            <InputDate class="form-control" @bind-Value="_announcement.PublishDate" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Expiry Date</label>
+                            <InputDate class="form-control" @bind-Value="_announcement.ExpiryDate" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_announcement.IsPublished" id="isPublished" />
+                                <label class="form-check-label" for="isPublished">Published</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_announcement.IsMembersOnly" id="isMembersOnly" />
+                                <label class="form-check-label" for="isMembersOnly">Members Only</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg"></i> Save Announcement
+                        </button>
+                        <a href="/admin/announcements" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Announcement _announcement = new() { PublishDate = DateTime.UtcNow, IsPublished = true };
+    private bool _isNew => Id == 0;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var existing = await AnnouncementService.GetByIdAsync(Id);
+            if (existing != null)
+            {
+                _announcement = existing;
+            }
+            else
+            {
+                Navigation.NavigateTo("/admin/announcements");
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                await AnnouncementService.CreateAsync(_announcement);
+            }
+            else
+            {
+                await AnnouncementService.UpdateAsync(_announcement);
+            }
+            Navigation.NavigateTo("/admin/announcements");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

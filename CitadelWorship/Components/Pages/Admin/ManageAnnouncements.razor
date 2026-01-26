@@ -1,0 +1,94 @@
+@page "/admin/announcements"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IAnnouncementService AnnouncementService
+
+<PageTitle>Manage Announcements - Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-megaphone"></i> Manage Announcements</h2>
+    <a href="/admin/announcements/edit/0" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Announcement
+    </a>
+</div>
+
+@if (_announcements == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Published</th>
+                        <th>Date</th>
+                        <th>Expiry</th>
+                        <th>Audience</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ann in _announcements)
+                    {
+                        <tr>
+                            <td>@ann.Title</td>
+                            <td>@ann.Category</td>
+                            <td>
+                                @if (ann.IsPublished)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </td>
+                            <td>@ann.PublishDate.ToString("MMM d, yyyy")</td>
+                            <td>@(ann.ExpiryDate?.ToString("MMM d, yyyy") ?? "None")</td>
+                            <td>
+                                @if (ann.IsMembersOnly)
+                                {
+                                    <span class="badge bg-info">Members Only</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-primary">Public</span>
+                                }
+                            </td>
+                            <td>
+                                <a href="/admin/announcements/edit/@ann.Id" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(ann.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Announcement>? _announcements;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _announcements = await AnnouncementService.GetAllAsync();
+    }
+
+    private async Task Delete(int id)
+    {
+        await AnnouncementService.DeleteAsync(id);
+        _announcements = await AnnouncementService.GetAllAsync();
+    }
+}

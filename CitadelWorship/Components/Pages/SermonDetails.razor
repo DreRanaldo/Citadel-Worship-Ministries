@@ -1,0 +1,105 @@
+@page "/sermons/{Id:int}"
+@inject ISermonService SermonService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_sermon?.Title ?? "Sermon") - Citadel Worship Ministries</PageTitle>
+
+@if (_sermon == null)
+{
+    <div class="container py-5 text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <section class="page-header bg-dark text-white py-5">
+        <div class="container text-center">
+            @if (!string.IsNullOrEmpty(_sermon.Series))
+            {
+                <span class="badge bg-primary fs-6 mb-2">@_sermon.Series</span>
+            }
+            <h1 class="display-5 fw-bold">@_sermon.Title</h1>
+            <p class="lead">@_sermon.Speaker &mdash; @_sermon.DatePreached.ToString("MMMM d, yyyy")</p>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Video Embed -->
+                    @if (!string.IsNullOrEmpty(_sermon.VideoUrl))
+                    {
+                        <div class="ratio ratio-16x9 mb-4 rounded overflow-hidden shadow">
+                            <iframe src="@_sermon.VideoUrl" title="@_sermon.Title"
+                                frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen></iframe>
+                        </div>
+                    }
+
+                    <!-- Audio -->
+                    @if (!string.IsNullOrEmpty(_sermon.AudioUrl))
+                    {
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body">
+                                <h5><i class="bi bi-music-note-beamed"></i> Listen to Audio</h5>
+                                <audio controls class="w-100 mt-2">
+                                    <source src="@_sermon.AudioUrl" />
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Description -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h3>About This Sermon</h3>
+                            <p class="fs-5">@_sermon.Description</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5>Sermon Details</h5>
+                            <hr />
+                            <p><i class="bi bi-person text-primary"></i> <strong>Speaker:</strong> @_sermon.Speaker</p>
+                            <p><i class="bi bi-calendar text-primary"></i> <strong>Date:</strong> @_sermon.DatePreached.ToString("MMMM d, yyyy")</p>
+                            @if (!string.IsNullOrEmpty(_sermon.ScriptureReference))
+                            {
+                                <p><i class="bi bi-book text-primary"></i> <strong>Scripture:</strong> @_sermon.ScriptureReference</p>
+                            }
+                            @if (!string.IsNullOrEmpty(_sermon.Series))
+                            {
+                                <p><i class="bi bi-collection text-primary"></i> <strong>Series:</strong> @_sermon.Series</p>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="/sermons" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Sermons
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Sermon? _sermon;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sermon = await SermonService.GetByIdAsync(Id);
+        if (_sermon == null || !_sermon.IsPublished)
+        {
+            Navigation.NavigateTo("/sermons");
+        }
+    }
+}

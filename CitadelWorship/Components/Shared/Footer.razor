@@ -1,0 +1,74 @@
+@inject ISiteSettingsService SettingsService
+
+<footer class="bg-dark text-light pt-5 pb-3 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <h5><i class="bi bi-building"></i> Citadel Worship Ministries</h5>
+                <p class="text-muted">A Place of Worship, Community, and Transformation</p>
+                @if (_settings != null)
+                {
+                    <p class="mb-1"><i class="bi bi-geo-alt"></i> @_settings.Address</p>
+                    <p class="mb-1"><i class="bi bi-telephone"></i> @_settings.Phone</p>
+                    <p class="mb-1"><i class="bi bi-envelope"></i> @_settings.Email</p>
+                }
+            </div>
+            <div class="col-md-4 mb-4">
+                <h5>Service Times</h5>
+                @if (_settings != null)
+                {
+                    <p class="mb-1"><strong>Sunday:</strong> @_settings.SundayServiceTimes</p>
+                    @if (!string.IsNullOrEmpty(_settings.WednesdayServiceTimes))
+                    {
+                        <p class="mb-1"><strong>Wednesday:</strong> @_settings.WednesdayServiceTimes</p>
+                    }
+                    @if (!string.IsNullOrEmpty(_settings.FridayServiceTimes))
+                    {
+                        <p class="mb-1"><strong>Friday:</strong> @_settings.FridayServiceTimes</p>
+                    }
+                }
+            </div>
+            <div class="col-md-4 mb-4">
+                <h5>Quick Links</h5>
+                <ul class="list-unstyled">
+                    <li><a href="/about" class="text-muted text-decoration-none">About Us</a></li>
+                    <li><a href="/ministries" class="text-muted text-decoration-none">Ministries</a></li>
+                    <li><a href="/events" class="text-muted text-decoration-none">Events</a></li>
+                    <li><a href="/sermons" class="text-muted text-decoration-none">Sermons</a></li>
+                    <li><a href="/give" class="text-muted text-decoration-none">Give</a></li>
+                    <li><a href="/contact" class="text-muted text-decoration-none">Contact</a></li>
+                </ul>
+                @if (_settings != null)
+                {
+                    <div class="mt-3">
+                        @if (!string.IsNullOrEmpty(_settings.FacebookUrl))
+                        {
+                            <a href="@_settings.FacebookUrl" class="text-muted me-3 fs-5" target="_blank"><i class="bi bi-facebook"></i></a>
+                        }
+                        @if (!string.IsNullOrEmpty(_settings.YouTubeUrl))
+                        {
+                            <a href="@_settings.YouTubeUrl" class="text-muted me-3 fs-5" target="_blank"><i class="bi bi-youtube"></i></a>
+                        }
+                        @if (!string.IsNullOrEmpty(_settings.InstagramUrl))
+                        {
+                            <a href="@_settings.InstagramUrl" class="text-muted me-3 fs-5" target="_blank"><i class="bi bi-instagram"></i></a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <hr class="border-secondary" />
+        <div class="text-center text-muted">
+            <small>&copy; @DateTime.Now.Year Citadel Worship Ministries. All rights reserved.</small>
+        </div>
+    </div>
+</footer>
+
+@code {
+    private SiteSettings? _settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync();
+    }
+}

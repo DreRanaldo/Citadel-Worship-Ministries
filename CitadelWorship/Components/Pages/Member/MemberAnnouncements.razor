@@ -1,0 +1,71 @@
+@page "/member/announcements"
+@attribute [Authorize(Roles = "Member,Admin")]
+@inject IAnnouncementService AnnouncementService
+
+<PageTitle>Announcements - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-4">
+    <div class="container">
+        <h1><i class="bi bi-megaphone"></i> Church Announcements</h1>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        @if (_announcements == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!_announcements.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-megaphone fs-1 text-muted"></i>
+                <p class="text-muted mt-3">No announcements at this time.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var announcement in _announcements)
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h4>@announcement.Title</h4>
+                                <p class="text-muted small">
+                                    <i class="bi bi-calendar"></i> @announcement.PublishDate.ToString("MMMM d, yyyy")
+                                    @if (!string.IsNullOrEmpty(announcement.Category))
+                                    {
+                                        <span class="ms-2 badge bg-secondary">@announcement.Category</span>
+                                    }
+                                    @if (announcement.IsMembersOnly)
+                                    {
+                                        <span class="ms-2 badge bg-info">Members Only</span>
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                        <p class="fs-5">@announcement.Content</p>
+                    </div>
+                </div>
+            }
+        }
+
+        <a href="/member/dashboard" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</section>
+
+@code {
+    private List<Announcement>? _announcements;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _announcements = await AnnouncementService.GetActiveAsync(includeMembersOnly: true);
+    }
+}

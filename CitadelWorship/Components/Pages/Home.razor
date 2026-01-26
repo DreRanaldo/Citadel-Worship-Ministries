@@ -1,0 +1,216 @@
+@page "/"
+@inject ISiteSettingsService SettingsService
+@inject ISermonService SermonService
+@inject IEventService EventService
+@inject IMinistryService MinistryService
+
+<PageTitle>Citadel Worship Ministries - Home</PageTitle>
+
+<!-- Hero Section -->
+<section class="hero-section text-white text-center d-flex align-items-center justify-content-center">
+    <div class="hero-overlay"></div>
+    <div class="container position-relative">
+        <h1 class="display-3 fw-bold mb-3">@(_settings?.ChurchName ?? "Citadel Worship Ministries")</h1>
+        <p class="lead fs-4 mb-2">@(_settings?.Tagline)</p>
+        <p class="fst-italic fs-5 mb-4 hero-scripture">@(_settings?.HeroScripture)</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="/about" class="btn btn-light btn-lg px-4">
+                <i class="bi bi-building"></i> Visit Us
+            </a>
+            <a href="/sermons" class="btn btn-outline-light btn-lg px-4">
+                <i class="bi bi-play-circle"></i> Watch Sermons
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Service Times -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-4">Join Us for Worship</h2>
+        <div class="row justify-content-center g-4">
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="bi bi-sun fs-1 text-primary"></i>
+                        <h4 class="card-title mt-3">Sunday Service</h4>
+                        <p class="card-text fs-5">@(_settings?.SundayServiceTimes ?? "9:00 AM & 11:00 AM")</p>
+                    </div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(_settings?.WednesdayServiceTimes))
+            {
+                <div class="col-md-4">
+                    <div class="card text-center h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-book fs-1 text-primary"></i>
+                            <h4 class="card-title mt-3">Wednesday</h4>
+                            <p class="card-text fs-5">@_settings.WednesdayServiceTimes</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_settings?.FridayServiceTimes))
+            {
+                <div class="col-md-4">
+                    <div class="card text-center h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-chat-heart fs-1 text-primary"></i>
+                            <h4 class="card-title mt-3">Friday</h4>
+                            <p class="card-text fs-5">@_settings.FridayServiceTimes</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Latest Sermons -->
+@if (_latestSermons?.Any() == true)
+{
+    <section class="py-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Latest Sermons</h2>
+                <a href="/sermons" class="btn btn-outline-primary">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="row g-4">
+                @foreach (var sermon in _latestSermons.Take(3))
+                {
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <span class="badge bg-primary mb-2">@sermon.Series</span>
+                                <h5 class="card-title">@sermon.Title</h5>
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-person"></i> @sermon.Speaker
+                                </p>
+                                <p class="text-muted mb-2">
+                                    <i class="bi bi-calendar"></i> @sermon.DatePreached.ToString("MMMM d, yyyy")
+                                </p>
+                                @if (!string.IsNullOrEmpty(sermon.ScriptureReference))
+                                {
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-book"></i> @sermon.ScriptureReference
+                                    </p>
+                                }
+                                <a href="/sermons/@sermon.Id" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-play-circle"></i> Listen / Watch
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<!-- Upcoming Events -->
+@if (_upcomingEvents?.Any() == true)
+{
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Upcoming Events</h2>
+                <a href="/events" class="btn btn-outline-primary">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="row g-4">
+                @foreach (var evt in _upcomingEvents.Take(3))
+                {
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="event-date-badge text-center me-3">
+                                        <div class="event-month">@evt.StartDate.ToString("MMM").ToUpper()</div>
+                                        <div class="event-day">@evt.StartDate.Day</div>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1">@evt.Title</h5>
+                                        @if (!string.IsNullOrEmpty(evt.Location))
+                                        {
+                                            <p class="text-muted mb-1">
+                                                <i class="bi bi-geo-alt"></i> @evt.Location
+                                            </p>
+                                        }
+                                        @if (!string.IsNullOrEmpty(evt.Category))
+                                        {
+                                            <span class="badge bg-secondary">@evt.Category</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <a href="/events/@evt.Id" class="btn btn-sm btn-outline-primary">Learn More</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<!-- Ministries Preview -->
+@if (_ministries?.Any() == true)
+{
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-4">
+                <h2>Our Ministries</h2>
+                <p class="text-muted">Find your place to serve and grow</p>
+            </div>
+            <div class="row g-4 justify-content-center">
+                @foreach (var ministry in _ministries.Take(4))
+                {
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center h-100 border-0 shadow-sm ministry-card">
+                            <div class="card-body">
+                                <i class="bi bi-people-fill fs-1 text-primary"></i>
+                                <h5 class="card-title mt-3">@ministry.Name</h5>
+                                <p class="card-text text-muted small">@ministry.LeaderName</p>
+                                <a href="/ministries/@ministry.Id" class="stretched-link"></a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="text-center mt-4">
+                <a href="/ministries" class="btn btn-outline-primary">Explore All Ministries</a>
+            </div>
+        </div>
+    </section>
+}
+
+<!-- Call to Action -->
+<section class="py-5 bg-primary text-white text-center">
+    <div class="container">
+        <h2 class="mb-3">New Here? We'd Love to Meet You!</h2>
+        <p class="lead mb-4">Whether you're looking for a church home or just visiting, you are welcome at Citadel Worship Ministries.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="/contact" class="btn btn-light btn-lg">
+                <i class="bi bi-envelope"></i> Contact Us
+            </a>
+            <a href="/give" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-heart"></i> Support Our Mission
+            </a>
+        </div>
+    </div>
+</section>
+
+@code {
+    private SiteSettings? _settings;
+    private List<Sermon>? _latestSermons;
+    private List<Event>? _upcomingEvents;
+    private List<Ministry>? _ministries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync();
+        _latestSermons = await SermonService.GetPublishedAsync();
+        _upcomingEvents = await EventService.GetUpcomingAsync();
+        _ministries = await MinistryService.GetActiveAsync();
+    }
+}

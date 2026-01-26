@@ -1,0 +1,168 @@
+@page "/contact"
+@inject ISiteSettingsService SettingsService
+@inject Data.ApplicationDbContext DbContext
+
+<PageTitle>Contact Us - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-5 fw-bold">Contact Us</h1>
+        <p class="lead">We'd love to hear from you</p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-5">
+            <!-- Contact Form -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="mb-4">Send Us a Message</h3>
+
+                        @if (_submitted)
+                        {
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> Thank you for your message! We will get back to you soon.
+                            </div>
+                        }
+                        else
+                        {
+                            <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="ContactForm">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary class="text-danger" />
+
+                                <div class="mb-3">
+                                    <label class="form-label">Your Name <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="_model.Name" placeholder="Enter your name" />
+                                    <ValidationMessage For="() => _model.Name" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="_model.Email" placeholder="your@email.com" />
+                                    <ValidationMessage For="() => _model.Email" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Subject</label>
+                                    <InputText class="form-control" @bind-Value="_model.Subject" placeholder="What is this regarding?" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Message <span class="text-danger">*</span></label>
+                                    <InputTextArea class="form-control" @bind-Value="_model.Message" rows="5" placeholder="Your message..." />
+                                    <ValidationMessage For="() => _model.Message" class="text-danger" />
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-lg" disabled="@_submitting">
+                                    @if (_submitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-send"></i> Send Message
+                                </button>
+                            </EditForm>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h3 class="mb-4">Get in Touch</h3>
+                        @if (_settings != null)
+                        {
+                            @if (!string.IsNullOrEmpty(_settings.Address))
+                            {
+                                <div class="d-flex mb-4">
+                                    <div class="me-3">
+                                        <i class="bi bi-geo-alt-fill fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Address</h5>
+                                        <p class="text-muted mb-0">@_settings.Address</p>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(_settings.Phone))
+                            {
+                                <div class="d-flex mb-4">
+                                    <div class="me-3">
+                                        <i class="bi bi-telephone-fill fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Phone</h5>
+                                        <p class="text-muted mb-0">@_settings.Phone</p>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(_settings.Email))
+                            {
+                                <div class="d-flex mb-4">
+                                    <div class="me-3">
+                                        <i class="bi bi-envelope-fill fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Email</h5>
+                                        <p class="text-muted mb-0">@_settings.Email</p>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5>Service Times</h5>
+                        @if (_settings != null)
+                        {
+                            <p class="mb-1"><strong>Sunday:</strong> @_settings.SundayServiceTimes</p>
+                            @if (!string.IsNullOrEmpty(_settings.WednesdayServiceTimes))
+                            {
+                                <p class="mb-1"><strong>Wednesday:</strong> @_settings.WednesdayServiceTimes</p>
+                            }
+                            @if (!string.IsNullOrEmpty(_settings.FridayServiceTimes))
+                            {
+                                <p class="mb-1"><strong>Friday:</strong> @_settings.FridayServiceTimes</p>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private SiteSettings? _settings;
+    private ContactMessage _model = new();
+    private bool _submitted = false;
+    private bool _submitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        _submitting = true;
+        try
+        {
+            _model.SubmittedAt = DateTime.UtcNow;
+            DbContext.ContactMessages.Add(_model);
+            await DbContext.SaveChangesAsync();
+            _submitted = true;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

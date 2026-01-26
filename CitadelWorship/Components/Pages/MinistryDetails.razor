@@ -1,0 +1,84 @@
+@page "/ministries/{Id:int}"
+@inject IMinistryService MinistryService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_ministry?.Name ?? "Ministry") - Citadel Worship Ministries</PageTitle>
+
+@if (_ministry == null)
+{
+    <div class="container py-5 text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <section class="page-header bg-dark text-white py-5">
+        <div class="container text-center">
+            <h1 class="display-5 fw-bold">@_ministry.Name</h1>
+            @if (!string.IsNullOrEmpty(_ministry.LeaderName))
+            {
+                <p class="lead">Led by @_ministry.LeaderName</p>
+            }
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h3>About This Ministry</h3>
+                            <p class="fs-5">@_ministry.Description</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5>Details</h5>
+                            <hr />
+                            @if (!string.IsNullOrEmpty(_ministry.LeaderName))
+                            {
+                                <p><i class="bi bi-person text-primary"></i> <strong>Leader:</strong> @_ministry.LeaderName</p>
+                            }
+                            @if (!string.IsNullOrEmpty(_ministry.MeetingSchedule))
+                            {
+                                <p><i class="bi bi-clock text-primary"></i> <strong>Schedule:</strong> @_ministry.MeetingSchedule</p>
+                            }
+                            @if (!string.IsNullOrEmpty(_ministry.MeetingLocation))
+                            {
+                                <p><i class="bi bi-geo-alt text-primary"></i> <strong>Location:</strong> @_ministry.MeetingLocation</p>
+                            }
+                            @if (!string.IsNullOrEmpty(_ministry.LeaderEmail))
+                            {
+                                <p><i class="bi bi-envelope text-primary"></i> <strong>Contact:</strong> @_ministry.LeaderEmail</p>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="/ministries" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Ministries
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Ministry? _ministry;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ministry = await MinistryService.GetByIdAsync(Id);
+        if (_ministry == null || !_ministry.IsActive)
+        {
+            Navigation.NavigateTo("/ministries");
+        }
+    }
+}

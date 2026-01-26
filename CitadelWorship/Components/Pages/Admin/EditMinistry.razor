@@ -1,0 +1,128 @@
+@page "/admin/ministries/edit/{Id:int}"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IMinistryService MinistryService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isNew ? "Add" : "Edit") Ministry - Admin</PageTitle>
+
+<h2>@(_isNew ? "Add New" : "Edit") Ministry</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <EditForm Model="_ministry" OnValidSubmit="HandleSubmit" FormName="EditMinistryForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_ministry.Name" />
+                        <ValidationMessage For="() => _ministry.Name" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <InputTextArea class="form-control" @bind-Value="_ministry.Description" rows="5" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Leader Name</label>
+                            <InputText class="form-control" @bind-Value="_ministry.LeaderName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Leader Email</label>
+                            <InputText class="form-control" @bind-Value="_ministry.LeaderEmail" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Meeting Schedule</label>
+                            <InputText class="form-control" @bind-Value="_ministry.MeetingSchedule" placeholder="e.g., Fridays at 7 PM" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Meeting Location</label>
+                            <InputText class="form-control" @bind-Value="_ministry.MeetingLocation" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Image URL</label>
+                        <InputText class="form-control" @bind-Value="_ministry.ImageUrl" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Sort Order</label>
+                            <InputNumber class="form-control" @bind-Value="_ministry.SortOrder" />
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_ministry.IsActive" id="isActive" />
+                                <label class="form-check-label" for="isActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg"></i> Save Ministry
+                        </button>
+                        <a href="/admin/ministries" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Ministry _ministry = new() { IsActive = true };
+    private bool _isNew => Id == 0;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var existing = await MinistryService.GetByIdAsync(Id);
+            if (existing != null)
+            {
+                _ministry = existing;
+            }
+            else
+            {
+                Navigation.NavigateTo("/admin/ministries");
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                await MinistryService.CreateAsync(_ministry);
+            }
+            else
+            {
+                await MinistryService.UpdateAsync(_ministry);
+            }
+            Navigation.NavigateTo("/admin/ministries");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

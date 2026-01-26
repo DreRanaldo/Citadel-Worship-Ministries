@@ -1,0 +1,171 @@
+@page "/member/prayer-requests"
+@attribute [Authorize(Roles = "Member,Admin")]
+@inject IPrayerRequestService PrayerRequestService
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+@using Microsoft.AspNetCore.Identity
+
+<PageTitle>Prayer Requests - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-4">
+    <div class="container">
+        <h1><i class="bi bi-chat-heart"></i> Prayer Requests</h1>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Submit Form -->
+            <div class="col-md-5">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h4 class="mb-4">Submit a Prayer Request</h4>
+
+                        @if (_submitted)
+                        {
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> Your prayer request has been submitted. Our prayer team will be lifting you up.
+                            </div>
+                            <button class="btn btn-outline-primary" @onclick="ResetForm">
+                                Submit Another Request
+                            </button>
+                        }
+                        else
+                        {
+                            <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="PrayerRequestForm">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-3">
+                                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="_model.Title" placeholder="Brief title for your request" />
+                                    <ValidationMessage For="() => _model.Title" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Description <span class="text-danger">*</span></label>
+                                    <InputTextArea class="form-control" @bind-Value="_model.Description" rows="5" placeholder="Share your prayer request..." />
+                                    <ValidationMessage For="() => _model.Description" class="text-danger" />
+                                </div>
+
+                                <div class="mb-3 form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_model.IsAnonymous" id="isAnonymous" />
+                                    <label class="form-check-label" for="isAnonymous">Submit anonymously</label>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" disabled="@_submitting">
+                                    @if (_submitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <i class="bi bi-send"></i> Submit Request
+                                </button>
+                            </EditForm>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Requests -->
+            <div class="col-md-7">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">My Prayer Requests</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_myRequests == null)
+                        {
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm text-primary"></div>
+                            </div>
+                        }
+                        else if (!_myRequests.Any())
+                        {
+                            <p class="text-muted text-center py-3">You haven't submitted any prayer requests yet.</p>
+                        }
+                        else
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var request in _myRequests)
+                                {
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">@request.Title</h6>
+                                                <p class="text-muted small mb-1">@request.SubmittedAt.ToString("MMM d, yyyy")</p>
+                                                <p class="mb-1">@request.Description</p>
+                                            </div>
+                                            <span class="badge @GetStatusBadgeClass(request.Status)">@request.Status</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a href="/member/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</section>
+
+@code {
+    private PrayerRequest _model = new();
+    private List<PrayerRequest>? _myRequests;
+    private bool _submitted = false;
+    private bool _submitting = false;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User != null)
+        {
+            var user = await UserManager.GetUserAsync(httpContext.User);
+            if (user != null)
+            {
+                _userId = user.Id;
+                _myRequests = await PrayerRequestService.GetByUserAsync(user.Id);
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _submitting = true;
+        try
+        {
+            _model.SubmittedByUserId = _userId;
+            await PrayerRequestService.CreateAsync(_model);
+            _submitted = true;
+
+            if (_userId != null)
+            {
+                _myRequests = await PrayerRequestService.GetByUserAsync(_userId);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _model = new PrayerRequest();
+        _submitted = false;
+    }
+
+    private string GetStatusBadgeClass(PrayerRequestStatus status) => status switch
+    {
+        PrayerRequestStatus.New => "bg-primary",
+        PrayerRequestStatus.Prayed => "bg-success",
+        PrayerRequestStatus.Archived => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

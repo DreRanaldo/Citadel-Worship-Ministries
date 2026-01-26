@@ -1,0 +1,176 @@
+@page "/admin/dashboard"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ISermonService SermonService
+@inject IEventService EventService
+@inject IMinistryService MinistryService
+@inject IAnnouncementService AnnouncementService
+@inject IPrayerRequestService PrayerRequestService
+@inject IUserService UserService
+
+<PageTitle>Admin Dashboard - Citadel Worship Ministries</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="bi bi-book fs-3"></i>
+                <h3 class="mt-2">@_sermonCount</h3>
+                <small>Sermons</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-success text-white">
+            <div class="card-body">
+                <i class="bi bi-calendar-event fs-3"></i>
+                <h3 class="mt-2">@_eventCount</h3>
+                <small>Events</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-info text-white">
+            <div class="card-body">
+                <i class="bi bi-people fs-3"></i>
+                <h3 class="mt-2">@_ministryCount</h3>
+                <small>Ministries</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-warning text-dark">
+            <div class="card-body">
+                <i class="bi bi-megaphone fs-3"></i>
+                <h3 class="mt-2">@_announcementCount</h3>
+                <small>Announcements</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-danger text-white">
+            <div class="card-body">
+                <i class="bi bi-chat-heart fs-3"></i>
+                <h3 class="mt-2">@_prayerCount</h3>
+                <small>Prayer Requests</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm text-center bg-dark text-white">
+            <div class="card-body">
+                <i class="bi bi-person-gear fs-3"></i>
+                <h3 class="mt-2">@_userCount</h3>
+                <small>Users</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-5">
+    <div class="col-12">
+        <h4>Quick Actions</h4>
+    </div>
+    <div class="col-md-3">
+        <a href="/admin/sermons/edit/0" class="btn btn-outline-primary w-100 py-3">
+            <i class="bi bi-plus-circle"></i> New Sermon
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/admin/events/edit/0" class="btn btn-outline-success w-100 py-3">
+            <i class="bi bi-plus-circle"></i> New Event
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/admin/announcements/edit/0" class="btn btn-outline-warning w-100 py-3">
+            <i class="bi bi-plus-circle"></i> New Announcement
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/admin/settings" class="btn btn-outline-secondary w-100 py-3">
+            <i class="bi bi-gear"></i> Site Settings
+        </a>
+    </div>
+</div>
+
+<!-- Recent Prayer Requests -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-chat-heart"></i> Recent Prayer Requests</h5>
+                <a href="/admin/prayer-requests" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                @if (_recentPrayers?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Submitted By</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prayer in _recentPrayers.Take(5))
+                                {
+                                    <tr>
+                                        <td>@prayer.Title</td>
+                                        <td>@(prayer.IsAnonymous ? "Anonymous" : prayer.SubmittedByUser?.FullName ?? "Unknown")</td>
+                                        <td>@prayer.SubmittedAt.ToString("MMM d, yyyy")</td>
+                                        <td><span class="badge @GetStatusBadge(prayer.Status)">@prayer.Status</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No prayer requests yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int _sermonCount, _eventCount, _ministryCount, _announcementCount, _prayerCount, _userCount;
+    private List<PrayerRequest>? _recentPrayers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sermons = await SermonService.GetAllAsync();
+        _sermonCount = sermons.Count;
+
+        var events = await EventService.GetAllAsync();
+        _eventCount = events.Count;
+
+        var ministries = await MinistryService.GetAllAsync();
+        _ministryCount = ministries.Count;
+
+        var announcements = await AnnouncementService.GetAllAsync();
+        _announcementCount = announcements.Count;
+
+        _recentPrayers = await PrayerRequestService.GetAllAsync();
+        _prayerCount = _recentPrayers.Count;
+
+        var users = await UserService.GetAllUsersAsync();
+        _userCount = users.Count;
+    }
+
+    private string GetStatusBadge(PrayerRequestStatus status) => status switch
+    {
+        PrayerRequestStatus.New => "bg-primary",
+        PrayerRequestStatus.Prayed => "bg-success",
+        PrayerRequestStatus.Archived => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

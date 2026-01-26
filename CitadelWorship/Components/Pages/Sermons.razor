@@ -1,0 +1,138 @@
+@page "/sermons"
+@inject ISermonService SermonService
+
+<PageTitle>Sermons - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-5 fw-bold">Sermons</h1>
+        <p class="lead">Be encouraged by the Word of God</p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <!-- Search & Filter -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search sermons..."
+                        @bind="_searchQuery" @bind:event="oninput" @onkeyup="OnSearch" />
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" @onchange="OnSeriesFilter">
+                    <option value="">All Series</option>
+                    @if (_seriesList != null)
+                    {
+                        @foreach (var series in _seriesList)
+                        {
+                            <option value="@series">@series</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+
+        @if (_sermons == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!_sermons.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-book fs-1 text-muted"></i>
+                <p class="text-muted mt-3">No sermons found.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var sermon in _sermons)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        @if (!string.IsNullOrEmpty(sermon.Series))
+                                        {
+                                            <span class="badge bg-primary mb-1">@sermon.Series</span>
+                                        }
+                                        <h5 class="card-title">@sermon.Title</h5>
+                                    </div>
+                                    <div class="text-end">
+                                        @if (!string.IsNullOrEmpty(sermon.VideoUrl))
+                                        {
+                                            <i class="bi bi-play-btn fs-4 text-danger"></i>
+                                        }
+                                        @if (!string.IsNullOrEmpty(sermon.AudioUrl))
+                                        {
+                                            <i class="bi bi-music-note-beamed fs-4 text-primary"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-person"></i> @sermon.Speaker
+                                </p>
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-calendar"></i> @sermon.DatePreached.ToString("MMMM d, yyyy")
+                                </p>
+                                @if (!string.IsNullOrEmpty(sermon.ScriptureReference))
+                                {
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-book"></i> @sermon.ScriptureReference
+                                    </p>
+                                }
+                                @if (!string.IsNullOrEmpty(sermon.Description))
+                                {
+                                    <p class="card-text">@TruncateText(sermon.Description, 150)</p>
+                                }
+                            </div>
+                            <div class="card-footer bg-transparent border-0 pb-3">
+                                <a href="/sermons/@sermon.Id" class="btn btn-outline-primary">
+                                    <i class="bi bi-play-circle"></i> Listen / Watch
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private List<Sermon>? _sermons;
+    private List<string>? _seriesList;
+    private string _searchQuery = string.Empty;
+    private string _selectedSeries = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sermons = await SermonService.GetPublishedAsync();
+        _seriesList = await SermonService.GetSeriesListAsync();
+    }
+
+    private async Task OnSearch()
+    {
+        _sermons = await SermonService.SearchAsync(_searchQuery, _selectedSeries);
+    }
+
+    private async Task OnSeriesFilter(ChangeEventArgs e)
+    {
+        _selectedSeries = e.Value?.ToString() ?? string.Empty;
+        _sermons = await SermonService.SearchAsync(_searchQuery, _selectedSeries);
+    }
+
+    private string TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        return text.Length <= maxLength ? text : text[..maxLength] + "...";
+    }
+}

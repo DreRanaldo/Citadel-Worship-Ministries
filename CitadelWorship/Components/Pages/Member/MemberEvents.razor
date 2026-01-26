@@ -1,0 +1,88 @@
+@page "/member/events"
+@attribute [Authorize(Roles = "Member,Admin")]
+@inject IEventService EventService
+
+<PageTitle>Member Events - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-4">
+    <div class="container">
+        <h1><i class="bi bi-calendar-event"></i> Member Events</h1>
+        <p class="mb-0">All upcoming events including members-only events</p>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        @if (_events == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!_events.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                <p class="text-muted mt-3">No upcoming events.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var evt in _events)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="event-date-badge text-center me-3 flex-shrink-0">
+                                        <div class="event-month">@evt.StartDate.ToString("MMM").ToUpper()</div>
+                                        <div class="event-day">@evt.StartDate.Day</div>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">@evt.Title</h5>
+                                        <p class="text-muted small mb-0">
+                                            @evt.StartDate.ToString("h:mm tt")
+                                            @if (!string.IsNullOrEmpty(evt.Location))
+                                            {
+                                                <text> | @evt.Location</text>
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                                <p>@evt.Description</p>
+                                <div class="d-flex gap-2">
+                                    @if (!string.IsNullOrEmpty(evt.Category))
+                                    {
+                                        <span class="badge bg-secondary">@evt.Category</span>
+                                    }
+                                    @if (evt.IsMembersOnly)
+                                    {
+                                        <span class="badge bg-info">Members Only</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="mt-4">
+            <a href="/member/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</section>
+
+@code {
+    private List<Event>? _events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _events = await EventService.GetUpcomingAsync(includeMembersOnly: true);
+    }
+}

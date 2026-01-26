@@ -1,0 +1,92 @@
+@page "/account/register"
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Register - Citadel Worship Ministries</PageTitle>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card border-0 shadow">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-building fs-1 text-primary"></i>
+                            <h2 class="mt-2">Create Account</h2>
+                            <p class="text-muted">Join our church community online</p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(_error))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle"></i> @_error
+                            </div>
+                        }
+
+                        <form method="post" action="/account/register-submit">
+                            <input type="hidden" name="__RequestVerificationToken" value="@_antiforgeryToken" />
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="FirstName" class="form-control" placeholder="First name" required maxlength="100" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="LastName" class="form-control" placeholder="Last name" required maxlength="100" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" name="Email" class="form-control" placeholder="your@email.com" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Password <span class="text-danger">*</span></label>
+                                <input type="password" name="Password" class="form-control" placeholder="Min. 8 characters" required minlength="8" />
+                                <div class="form-text">Must include uppercase, lowercase, digit, and special character.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                                <input type="password" name="ConfirmPassword" class="form-control" placeholder="Re-enter password" required minlength="8" />
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                <i class="bi bi-person-plus"></i> Create Account
+                            </button>
+                        </form>
+
+                        <hr />
+                        <div class="text-center">
+                            <span class="text-muted">Already have an account?</span>
+                            <a href="/account/login" class="text-decoration-none fw-semibold"> Sign in</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private string? _error;
+    private string _antiforgeryToken = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _error = query["error"];
+
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            var tokens = Antiforgery.GetAndStoreTokens(httpContext);
+            _antiforgeryToken = tokens.RequestToken ?? string.Empty;
+        }
+    }
+}

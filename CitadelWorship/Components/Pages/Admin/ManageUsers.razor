@@ -1,0 +1,129 @@
+@page "/admin/users"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IUserService UserService
+
+<PageTitle>Manage Users - Admin</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-person-gear"></i> Manage Users</h2>
+
+@if (_users == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Roles</th>
+                        <th>Joined</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in _users)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>
+                                @foreach (var role in user.Roles)
+                                {
+                                    <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary") me-1">@role</span>
+                                }
+                            </td>
+                            <td>@user.DateJoined.ToString("MMM d, yyyy")</td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Disabled</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    @if (!user.Roles.Contains("Admin"))
+                                    {
+                                        <button class="btn btn-outline-danger" title="Make Admin" @onclick="() => AssignRole(user.Id, \"Admin\")">
+                                            <i class="bi bi-shield-plus"></i>
+                                        </button>
+                                    }
+                                    else if (user.Roles.Contains("Admin") && user.Roles.Contains("Member"))
+                                    {
+                                        <button class="btn btn-outline-warning" title="Remove Admin" @onclick="() => RemoveRole(user.Id, \"Admin\")">
+                                            <i class="bi bi-shield-minus"></i>
+                                        </button>
+                                    }
+                                    @if (!user.Roles.Contains("Member"))
+                                    {
+                                        <button class="btn btn-outline-primary" title="Make Member" @onclick="() => AssignRole(user.Id, \"Member\")">
+                                            <i class="bi bi-person-plus"></i>
+                                        </button>
+                                    }
+                                    <button class="btn @(user.IsActive ? "btn-outline-secondary" : "btn-outline-success")" title="@(user.IsActive ? "Disable" : "Enable")"
+                                        @onclick="() => ToggleActive(user.Id)">
+                                        <i class="bi @(user.IsActive ? "bi-person-slash" : "bi-person-check")"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") mt-3 alert-dismissible fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+    </div>
+}
+
+@code {
+    private List<UserDto>? _users;
+    private string? _message;
+    private bool _messageIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _users = await UserService.GetAllUsersAsync();
+    }
+
+    private async Task AssignRole(string userId, string role)
+    {
+        var success = await UserService.AssignRoleAsync(userId, role);
+        _message = success ? $"Role '{role}' assigned successfully." : "Failed to assign role.";
+        _messageIsError = !success;
+        _users = await UserService.GetAllUsersAsync();
+    }
+
+    private async Task RemoveRole(string userId, string role)
+    {
+        var success = await UserService.RemoveRoleAsync(userId, role);
+        _message = success ? $"Role '{role}' removed successfully." : "Failed to remove role.";
+        _messageIsError = !success;
+        _users = await UserService.GetAllUsersAsync();
+    }
+
+    private async Task ToggleActive(string userId)
+    {
+        var success = await UserService.ToggleUserActiveAsync(userId);
+        _message = success ? "User status updated." : "Failed to update status.";
+        _messageIsError = !success;
+        _users = await UserService.GetAllUsersAsync();
+    }
+}

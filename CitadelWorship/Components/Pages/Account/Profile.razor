@@ -1,0 +1,132 @@
+@page "/account/profile"
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+@using Microsoft.AspNetCore.Identity
+
+<PageTitle>My Profile - Citadel Worship Ministries</PageTitle>
+
+<section class="page-header bg-dark text-white py-4">
+    <div class="container">
+        <h1><i class="bi bi-person-circle"></i> My Profile</h1>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        @if (!string.IsNullOrEmpty(_success))
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle"></i> @_success
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-triangle"></i> @_error
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- Profile Info -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h4 class="mb-4">Profile Information</h4>
+                        @if (_user != null)
+                        {
+                            <form method="post" action="/account/update-profile">
+                                <input type="hidden" name="__RequestVerificationToken" value="@_antiforgeryToken" />
+
+                                <div class="mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" name="FirstName" class="form-control" value="@_user.FirstName" required maxlength="100" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" name="LastName" class="form-control" value="@_user.LastName" required maxlength="100" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="@_user.Email" disabled />
+                                    <div class="form-text">Email cannot be changed.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Member Since</label>
+                                    <input type="text" class="form-control" value="@_user.DateJoined.ToString("MMMM d, yyyy")" disabled />
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg"></i> Update Profile
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h4 class="mb-4">Change Password</h4>
+                        <form method="post" action="/account/change-password">
+                            <input type="hidden" name="__RequestVerificationToken" value="@_antiforgeryToken" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <input type="password" name="CurrentPassword" class="form-control" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="NewPassword" class="form-control" required minlength="8" />
+                                <div class="form-text">Min. 8 characters with uppercase, lowercase, digit, and special character.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Confirm New Password</label>
+                                <input type="password" name="ConfirmNewPassword" class="form-control" required minlength="8" />
+                            </div>
+
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-shield-lock"></i> Change Password
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private ApplicationUser? _user;
+    private string? _error;
+    private string? _success;
+    private string _antiforgeryToken = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _error = query["error"];
+        _success = query["success"];
+
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            _user = await UserManager.GetUserAsync(httpContext.User);
+            var tokens = Antiforgery.GetAndStoreTokens(httpContext);
+            _antiforgeryToken = tokens.RequestToken ?? string.Empty;
+        }
+    }
+}

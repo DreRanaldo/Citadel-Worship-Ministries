@@ -1,0 +1,130 @@
+@page "/admin/sermons/edit/{Id:int}"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ISermonService SermonService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isNew ? "Add" : "Edit") Sermon - Admin</PageTitle>
+
+<h2>@(_isNew ? "Add New" : "Edit") Sermon</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <EditForm Model="_sermon" OnValidSubmit="HandleSubmit" FormName="EditSermonForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_sermon.Title" />
+                        <ValidationMessage For="() => _sermon.Title" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Speaker <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_sermon.Speaker" />
+                        <ValidationMessage For="() => _sermon.Speaker" class="text-danger" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date Preached</label>
+                            <InputDate class="form-control" @bind-Value="_sermon.DatePreached" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Series</label>
+                            <InputText class="form-control" @bind-Value="_sermon.Series" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Scripture Reference</label>
+                        <InputText class="form-control" @bind-Value="_sermon.ScriptureReference" placeholder="e.g., John 3:16" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <InputTextArea class="form-control" @bind-Value="_sermon.Description" rows="5" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Video URL (YouTube embed)</label>
+                        <InputText class="form-control" @bind-Value="_sermon.VideoUrl" placeholder="https://www.youtube.com/embed/..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Audio URL</label>
+                        <InputText class="form-control" @bind-Value="_sermon.AudioUrl" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Thumbnail URL</label>
+                        <InputText class="form-control" @bind-Value="_sermon.ThumbnailUrl" />
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox class="form-check-input" @bind-Value="_sermon.IsPublished" id="isPublished" />
+                        <label class="form-check-label" for="isPublished">Published</label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg"></i> Save Sermon
+                        </button>
+                        <a href="/admin/sermons" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Sermon _sermon = new() { DatePreached = DateTime.UtcNow, IsPublished = true };
+    private bool _isNew => Id == 0;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var existing = await SermonService.GetByIdAsync(Id);
+            if (existing != null)
+            {
+                _sermon = existing;
+            }
+            else
+            {
+                Navigation.NavigateTo("/admin/sermons");
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                await SermonService.CreateAsync(_sermon);
+            }
+            else
+            {
+                await SermonService.UpdateAsync(_sermon);
+            }
+            Navigation.NavigateTo("/admin/sermons");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
