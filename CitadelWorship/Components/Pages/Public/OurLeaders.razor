@@ -1,0 +1,91 @@
+@page "/leaders"
+@inject ILeaderService LeaderService
+
+<PageTitle>Our Leaders - Citadel Worship Ministries</PageTitle>
+
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold">Our Leaders</h1>
+        <p class="lead mb-0">Meet the dedicated team serving our church family</p>
+    </div>
+</section>
+
+<!-- Leaders Section -->
+<section class="py-5">
+    <div class="container">
+        @if (_leaders == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">Loading...</p>
+            </div>
+        }
+        else if (!_leaders.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-people display-1 text-muted"></i>
+                <h4 class="mt-3">Coming Soon</h4>
+                <p class="text-muted">Our leadership team information will be available soon.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4 justify-content-center">
+                @foreach (var leader in _leaders)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100 text-center">
+                            <div class="card-body p-4">
+                                @if (!string.IsNullOrEmpty(leader.ImageUrl))
+                                {
+                                    <img src="@leader.ImageUrl" alt="@leader.FullName"
+                                         class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3"
+                                         style="width:150px;height:150px;">
+                                        <i class="bi bi-person display-3 text-primary"></i>
+                                    </div>
+                                }
+                                <h4 class="card-title mb-1">@leader.FullName</h4>
+                                <p class="text-primary fw-semibold mb-3">@leader.Title</p>
+                                @if (!string.IsNullOrEmpty(leader.Bio))
+                                {
+                                    <p class="card-text text-muted">@leader.Bio</p>
+                                }
+                                @if (!string.IsNullOrEmpty(leader.Email))
+                                {
+                                    <a href="mailto:@leader.Email" class="btn btn-sm btn-outline-primary me-1">
+                                        <i class="bi bi-envelope"></i> Email
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="bg-light py-5">
+    <div class="container text-center">
+        <h3 class="mb-3">Join Us This Sunday</h3>
+        <p class="text-muted mb-4">Experience the warmth of our church family and meet our leadership team in person.</p>
+        <a href="/contact" class="btn btn-primary btn-lg">
+            <i class="bi bi-geo-alt"></i> Get Directions
+        </a>
+    </div>
+</section>
+
+@code {
+    private List<Leader>? _leaders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _leaders = await LeaderService.GetActiveAsync();
+    }
+}

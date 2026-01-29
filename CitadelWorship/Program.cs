@@ -55,6 +55,8 @@ builder.Services.AddScoped<IFinancialService, FinancialService>();
 builder.Services.AddScoped<IEducationRequestService, EducationRequestService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<ISpecialNoteService, SpecialNoteService>();
+builder.Services.AddScoped<ILeaderService, LeaderService>();
+builder.Services.AddScoped<IGalleryService, GalleryService>();
 
 // Authorization policies
 builder.Services.AddAuthorizationCore(options =>

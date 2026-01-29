@@ -1,0 +1,262 @@
+@page "/admin/leaders/edit/{Id:int}"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ILeaderService LeaderService
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isNew ? "Add" : "Edit") Leader - Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> @(_isNew ? "Add New" : "Edit") Leader</h2>
+    <a href="/admin/leaders" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Leaders
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <EditForm Model="_leader" OnValidSubmit="SaveLeader">
+                    <DataAnnotationsValidator />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="_leader.FirstName" class="form-control" />
+                            <ValidationMessage For="() => _leader.FirstName" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="_leader.LastName" class="form-control" />
+                            <ValidationMessage For="() => _leader.LastName" class="text-danger small" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Title/Position <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="_leader.Title" class="form-control" placeholder="e.g., Senior Pastor, Worship Leader" />
+                            <ValidationMessage For="() => _leader.Title" class="text-danger small" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <InputNumber @bind-Value="_leader.DisplayOrder" class="form-control" />
+                            <small class="text-muted">Lower numbers appear first</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <InputText @bind-Value="_leader.Email" class="form-control" type="email" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <InputText @bind-Value="_leader.Phone" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Bio</label>
+                            <InputTextArea @bind-Value="_leader.Bio" class="form-control" rows="4"
+                                           placeholder="Brief biography or description..." />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Profile Photo</label>
+                            <InputFile OnChange="HandleFileUpload" class="form-control" accept="image/*" />
+                            <small class="text-muted">Recommended: Square image, at least 300x300 pixels. Max 5MB.</small>
+
+                            @if (_isUploading)
+                            {
+                                <div class="mt-2">
+                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                    <span class="ms-2">Uploading...</span>
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <InputCheckbox @bind-Value="_leader.IsActive" class="form-check-input" id="isActive" />
+                                <label class="form-check-label" for="isActive">Active (visible on website)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-circle"></i>
+                                <span> Save Leader</span>
+                            }
+                        </button>
+                        <a href="/admin/leaders" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Photo Preview</h5>
+            </div>
+            <div class="card-body text-center">
+                @if (!string.IsNullOrEmpty(_leader.ImageUrl))
+                {
+                    <img src="@_leader.ImageUrl" alt="@_leader.FullName"
+                         class="rounded-circle img-fluid mb-3" style="width:200px;height:200px;object-fit:cover;" />
+                    <p class="mb-0 fw-semibold">@_leader.FullName</p>
+                    <p class="text-muted">@_leader.Title</p>
+                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="RemovePhoto">
+                        <i class="bi bi-trash"></i> Remove Photo
+                    </button>
+                }
+                else
+                {
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                         style="width:200px;height:200px;">
+                        <i class="bi bi-person display-1 text-muted"></i>
+                    </div>
+                    <p class="text-muted">No photo uploaded yet</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Leader _leader = new();
+    private bool _isNew => Id == 0;
+    private bool _isSaving = false;
+    private bool _isUploading = false;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var leader = await LeaderService.GetByIdAsync(Id);
+            if (leader != null)
+            {
+                _leader = leader;
+            }
+            else
+            {
+                Navigation.NavigateTo("/admin/leaders");
+            }
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (file.Size > 5 * 1024 * 1024) // 5MB limit
+        {
+            _message = "File size must be less than 5MB.";
+            _isError = true;
+            return;
+        }
+
+        _isUploading = true;
+        _message = null;
+
+        try
+        {
+            var uploadsPath = Path.Combine(Environment.WebRootPath, "uploads", "leaders");
+            Directory.CreateDirectory(uploadsPath);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var filePath = Path.Combine(uploadsPath, fileName);
+
+            await using var stream = new FileStream(filePath, FileMode.Create);
+            await file.OpenReadStream(5 * 1024 * 1024).CopyToAsync(stream);
+
+            // Delete old image if exists
+            if (!string.IsNullOrEmpty(_leader.ImageUrl))
+            {
+                var oldPath = Path.Combine(Environment.WebRootPath, _leader.ImageUrl.TrimStart('/'));
+                if (File.Exists(oldPath))
+                {
+                    File.Delete(oldPath);
+                }
+            }
+
+            _leader.ImageUrl = $"/uploads/leaders/{fileName}";
+            _message = "Photo uploaded successfully!";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error uploading file: {ex.Message}";
+            _isError = true;
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+
+    private void RemovePhoto()
+    {
+        if (!string.IsNullOrEmpty(_leader.ImageUrl))
+        {
+            var filePath = Path.Combine(Environment.WebRootPath, _leader.ImageUrl.TrimStart('/'));
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+            _leader.ImageUrl = null;
+        }
+    }
+
+    private async Task SaveLeader()
+    {
+        _isSaving = true;
+        _message = null;
+
+        try
+        {
+            if (_isNew)
+            {
+                await LeaderService.CreateAsync(_leader);
+                _message = "Leader added successfully!";
+            }
+            else
+            {
+                await LeaderService.UpdateAsync(_leader);
+                _message = "Leader updated successfully!";
+            }
+            _isError = false;
+
+            // Redirect after short delay
+            await Task.Delay(1000);
+            Navigation.NavigateTo("/admin/leaders");
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error saving leader: {ex.Message}";
+            _isError = true;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

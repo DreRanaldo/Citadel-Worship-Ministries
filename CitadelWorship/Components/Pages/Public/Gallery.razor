@@ -1,0 +1,171 @@
+@page "/gallery"
+@inject IGalleryService GalleryService
+
+<PageTitle>Photo Gallery - Citadel Worship Ministries</PageTitle>
+
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold">Photo Gallery</h1>
+        <p class="lead mb-0">Capturing moments of worship, fellowship, and community</p>
+    </div>
+</section>
+
+<!-- Gallery Section -->
+<section class="py-5">
+    <div class="container">
+        <!-- Category Filter -->
+        @if (_categories?.Any() == true)
+        {
+            <div class="text-center mb-4">
+                <div class="btn-group flex-wrap" role="group">
+                    <button class="btn @(_selectedCategory == null ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="() => FilterByCategory(null)">
+                        All Photos
+                    </button>
+                    @foreach (var category in _categories)
+                    {
+                        <button class="btn @(_selectedCategory == category ? "btn-primary" : "btn-outline-primary")"
+                                @onclick="() => FilterByCategory(category)">
+                            @category
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_images == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">Loading gallery...</p>
+            </div>
+        }
+        else if (!_filteredImages.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-images display-1 text-muted"></i>
+                <h4 class="mt-3">No Photos Yet</h4>
+                <p class="text-muted">Check back soon for photos from our services and events.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var image in _filteredImages)
+                {
+                    <div class="col-sm-6 col-md-4 col-lg-3">
+                        <div class="card border-0 shadow-sm h-100 gallery-card" @onclick="() => OpenLightbox(image)">
+                            <img src="@image.ImageUrl" class="card-img-top" alt="@image.Title"
+                                 style="height:200px;object-fit:cover;cursor:pointer;" />
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-0 small">@image.Title</h6>
+                                @if (!string.IsNullOrEmpty(image.Category))
+                                {
+                                    <span class="badge bg-primary bg-opacity-75 small">@image.Category</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Lightbox Modal -->
+@if (_lightboxImage != null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,0.9);" tabindex="-1" @onclick="CloseLightbox">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0" @onclick:stopPropagation="true">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title text-white">@_lightboxImage.Title</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseLightbox"></button>
+                </div>
+                <div class="modal-body text-center p-2">
+                    <img src="@_lightboxImage.ImageUrl" alt="@_lightboxImage.Title"
+                         class="img-fluid rounded" style="max-height:70vh;" />
+                    @if (!string.IsNullOrEmpty(_lightboxImage.Description))
+                    {
+                        <p class="text-white-50 mt-3 mb-0">@_lightboxImage.Description</p>
+                    }
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-0">
+                    <button class="btn btn-outline-light btn-sm" @onclick="PreviousImage" disabled="@(!HasPrevious)">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                    <span class="text-white-50 mx-3">@(_currentIndex + 1) of @_filteredImages.Count()</span>
+                    <button class="btn btn-outline-light btn-sm" @onclick="NextImage" disabled="@(!HasNext)">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .gallery-card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease;
+    }
+    .gallery-card img:hover {
+        opacity: 0.9;
+    }
+</style>
+
+@code {
+    private List<GalleryImage>? _images;
+    private List<string>? _categories;
+    private string? _selectedCategory;
+    private GalleryImage? _lightboxImage;
+    private int _currentIndex;
+
+    private IEnumerable<GalleryImage> _filteredImages =>
+        _images?.Where(i => _selectedCategory == null || i.Category == _selectedCategory) ?? Enumerable.Empty<GalleryImage>();
+
+    private bool HasPrevious => _currentIndex > 0;
+    private bool HasNext => _currentIndex < _filteredImages.Count() - 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _images = await GalleryService.GetActiveAsync();
+        _categories = await GalleryService.GetCategoriesAsync();
+    }
+
+    private void FilterByCategory(string? category)
+    {
+        _selectedCategory = category;
+        _lightboxImage = null;
+    }
+
+    private void OpenLightbox(GalleryImage image)
+    {
+        _lightboxImage = image;
+        _currentIndex = _filteredImages.ToList().IndexOf(image);
+    }
+
+    private void CloseLightbox()
+    {
+        _lightboxImage = null;
+    }
+
+    private void PreviousImage()
+    {
+        if (HasPrevious)
+        {
+            _currentIndex--;
+            _lightboxImage = _filteredImages.ElementAt(_currentIndex);
+        }
+    }
+
+    private void NextImage()
+    {
+        if (HasNext)
+        {
+            _currentIndex++;
+            _lightboxImage = _filteredImages.ElementAt(_currentIndex);
+        }
+    }
+}

@@ -24,6 +24,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<EducationRequest> EducationRequests => Set<EducationRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SpecialNote> SpecialNotes => Set<SpecialNote>();
+    public DbSet<Leader> Leaders => Set<Leader>();
+    public DbSet<GalleryImage> GalleryImages => Set<GalleryImage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -70,5 +72,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<SpecialNote>()
             .HasIndex(n => n.Category);
+
+        builder.Entity<Leader>()
+            .HasIndex(l => l.DisplayOrder);
+
+        builder.Entity<GalleryImage>()
+            .HasIndex(g => g.Category);
+
+        builder.Entity<GalleryImage>()
+            .HasIndex(g => g.UploadedAt);
     }
 }

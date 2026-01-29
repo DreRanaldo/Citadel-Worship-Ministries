@@ -1,0 +1,374 @@
+@page "/admin/gallery"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IGalleryService GalleryService
+@inject IWebHostEnvironment Environment
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Manage Gallery - Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-images"></i> Photo Gallery</h2>
+    <button class="btn btn-primary" @onclick="() => _showUploadModal = true">
+        <i class="bi bi-cloud-upload"></i> Upload Images
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+    </div>
+}
+
+<!-- Category Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-semibold me-2">Filter:</span>
+            <button class="btn btn-sm @(_selectedCategory == null ? "btn-primary" : "btn-outline-primary")"
+                    @onclick="() => FilterByCategory(null)">
+                All
+            </button>
+            @if (_categories != null)
+            {
+                @foreach (var category in _categories)
+                {
+                    <button class="btn btn-sm @(_selectedCategory == category ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="() => FilterByCategory(category)">
+                        @category
+                    </button>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@if (_images == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Loading gallery...</p>
+    </div>
+}
+else if (!_images.Any())
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-images display-1 text-muted"></i>
+            <h4 class="mt-3">No Images Yet</h4>
+            <p class="text-muted">Upload images to create your church gallery.</p>
+            <button class="btn btn-primary" @onclick="() => _showUploadModal = true">
+                <i class="bi bi-cloud-upload"></i> Upload First Image
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var image in _filteredImages)
+        {
+            <div class="col-md-4 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="position-relative">
+                        <img src="@image.ImageUrl" class="card-img-top" alt="@image.Title"
+                             style="height:200px;object-fit:cover;" />
+                        @if (!image.IsActive)
+                        {
+                            <span class="position-absolute top-0 end-0 m-2 badge bg-secondary">Hidden</span>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title mb-1">@image.Title</h6>
+                        @if (!string.IsNullOrEmpty(image.Category))
+                        {
+                            <span class="badge bg-info mb-2">@image.Category</span>
+                        }
+                        <p class="card-text small text-muted mb-2">
+                            @(image.Description?.Length > 50 ? image.Description.Substring(0, 50) + "..." : image.Description)
+                        </p>
+                        <small class="text-muted">@image.UploadedAt.ToString("MMM d, yyyy")</small>
+                    </div>
+                    <div class="card-footer bg-white border-0">
+                        <div class="btn-group btn-group-sm w-100">
+                            <button class="btn btn-outline-primary" @onclick="() => EditImage(image)">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            <button class="btn btn-outline-danger" @onclick="() => DeleteImage(image.Id)">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Upload Modal -->
+@if (_showUploadModal)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cloud-upload"></i>
+                        @(_editingImage == null ? "Upload Images" : "Edit Image")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="_uploadModel" OnValidSubmit="SaveImage">
+                        <DataAnnotationsValidator />
+
+                        @if (_editingImage == null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Select Images</label>
+                                <InputFile OnChange="HandleFileSelection" class="form-control" accept="image/*" multiple />
+                                <small class="text-muted">You can select multiple images. Max 5MB each.</small>
+                            </div>
+
+                            @if (_selectedFiles.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Selected Files (@_selectedFiles.Count)</label>
+                                    <div class="list-group">
+                                        @foreach (var file in _selectedFiles)
+                                        {
+                                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                <span>@file.Name (@(file.Size / 1024) KB)</span>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveFile(file)">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center mb-3">
+                                <img src="@_editingImage.ImageUrl" alt="@_editingImage.Title" class="img-fluid rounded" style="max-height:200px;" />
+                            </div>
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Title</label>
+                                <InputText @bind-Value="_uploadModel.Title" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Category</label>
+                                <InputText @bind-Value="_uploadModel.Category" class="form-control" list="categories"
+                                           placeholder="e.g., Worship, Events" />
+                                <datalist id="categories">
+                                    <option value="Worship" />
+                                    <option value="Events" />
+                                    <option value="Community" />
+                                    <option value="Youth" />
+                                    <option value="Outreach" />
+                                </datalist>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Description</label>
+                                <InputTextArea @bind-Value="_uploadModel.Description" class="form-control" rows="2" />
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <InputCheckbox @bind-Value="_uploadModel.IsActive" class="form-check-input" id="imageActive" />
+                                    <label class="form-check-label" for="imageActive">Active (visible in gallery)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@(_isUploading || (_editingImage == null && !_selectedFiles.Any()))">
+                                @if (_isUploading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    <span>@(_editingImage == null ? "Uploading..." : "Saving...")</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle"></i>
+                                    <span> @(_editingImage == null ? "Upload" : "Save Changes")</span>
+                                }
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GalleryImage>? _images;
+    private List<string>? _categories;
+    private string? _selectedCategory;
+    private string? _message;
+    private bool _isError;
+    private bool _showUploadModal;
+    private bool _isUploading;
+
+    private GalleryImage? _editingImage;
+    private List<IBrowserFile> _selectedFiles = new();
+    private UploadModel _uploadModel = new();
+
+    private IEnumerable<GalleryImage> _filteredImages =>
+        _images?.Where(i => _selectedCategory == null || i.Category == _selectedCategory) ?? Enumerable.Empty<GalleryImage>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadImages();
+    }
+
+    private async Task LoadImages()
+    {
+        _images = await GalleryService.GetAllAsync();
+        _categories = await GalleryService.GetCategoriesAsync();
+    }
+
+    private void FilterByCategory(string? category)
+    {
+        _selectedCategory = category;
+    }
+
+    private void HandleFileSelection(InputFileChangeEventArgs e)
+    {
+        _selectedFiles = e.GetMultipleFiles(10).ToList();
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        _selectedFiles.Remove(file);
+    }
+
+    private void EditImage(GalleryImage image)
+    {
+        _editingImage = image;
+        _uploadModel = new UploadModel
+        {
+            Title = image.Title,
+            Description = image.Description,
+            Category = image.Category,
+            IsActive = image.IsActive
+        };
+        _showUploadModal = true;
+    }
+
+    private void CloseModal()
+    {
+        _showUploadModal = false;
+        _editingImage = null;
+        _selectedFiles.Clear();
+        _uploadModel = new UploadModel();
+    }
+
+    private async Task SaveImage()
+    {
+        _isUploading = true;
+        _message = null;
+
+        try
+        {
+            var httpContext = HttpContextAccessor.HttpContext;
+            var currentUser = httpContext?.User != null ? await UserManager.GetUserAsync(httpContext.User) : null;
+
+            if (_editingImage != null)
+            {
+                // Update existing image
+                _editingImage.Title = _uploadModel.Title ?? _editingImage.Title;
+                _editingImage.Description = _uploadModel.Description;
+                _editingImage.Category = _uploadModel.Category;
+                _editingImage.IsActive = _uploadModel.IsActive;
+
+                await GalleryService.UpdateAsync(_editingImage);
+                _message = "Image updated successfully!";
+            }
+            else
+            {
+                // Upload new images
+                var uploadsPath = Path.Combine(Environment.WebRootPath, "uploads", "gallery");
+                Directory.CreateDirectory(uploadsPath);
+
+                int uploadedCount = 0;
+                foreach (var file in _selectedFiles)
+                {
+                    if (file.Size > 5 * 1024 * 1024) continue; // Skip files over 5MB
+
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+                    var filePath = Path.Combine(uploadsPath, fileName);
+
+                    await using var stream = new FileStream(filePath, FileMode.Create);
+                    await file.OpenReadStream(5 * 1024 * 1024).CopyToAsync(stream);
+
+                    var galleryImage = new GalleryImage
+                    {
+                        Title = string.IsNullOrEmpty(_uploadModel.Title) ? Path.GetFileNameWithoutExtension(file.Name) : _uploadModel.Title,
+                        Description = _uploadModel.Description,
+                        Category = _uploadModel.Category,
+                        ImageUrl = $"/uploads/gallery/{fileName}",
+                        IsActive = _uploadModel.IsActive,
+                        UploadedByUserId = currentUser?.Id
+                    };
+
+                    await GalleryService.CreateAsync(galleryImage);
+                    uploadedCount++;
+                }
+
+                _message = $"{uploadedCount} image(s) uploaded successfully!";
+            }
+
+            _isError = false;
+            await LoadImages();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error: {ex.Message}";
+            _isError = true;
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+
+    private async Task DeleteImage(int id)
+    {
+        var image = _images?.FirstOrDefault(i => i.Id == id);
+        if (image != null)
+        {
+            // Delete file
+            var filePath = Path.Combine(Environment.WebRootPath, image.ImageUrl.TrimStart('/'));
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+
+            await GalleryService.DeleteAsync(id);
+            _message = "Image deleted successfully.";
+            _isError = false;
+            await LoadImages();
+        }
+    }
+
+    private class UploadModel
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public string? Category { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}
