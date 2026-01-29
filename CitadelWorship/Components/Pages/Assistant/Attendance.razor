@@ -2,6 +2,7 @@
 @layout AssistantLayout
 @attribute [Authorize(Roles = "AdminAssistant,Admin")]
 @using Microsoft.AspNetCore.Identity
+@using AttendanceModel = CitadelWorship.Data.Models.Attendance
 @inject IAttendanceService AttendanceService
 @inject UserManager<ApplicationUser> UserManager
 @inject IHttpContextAccessor HttpContextAccessor
@@ -218,7 +219,7 @@
     // Records filter
     private DateTime? _filterStart;
     private DateTime? _filterEnd;
-    private List<Attendance>? _attendanceRecords;
+    private List<AttendanceModel>? _attendanceRecords;
 
     private IEnumerable<ApplicationUser> FilteredUsers =>
         (_allUsers ?? new List<ApplicationUser>())
@@ -288,11 +289,11 @@
         try
         {
             var currentUser = await GetCurrentUserAsync();
-            var records = new List<Attendance>();
+            var records = new List<AttendanceModel>();
 
             foreach (var user in _allUsers)
             {
-                records.Add(new Attendance
+                records.Add(new AttendanceModel
                 {
                     ServiceDate = _serviceDate,
                     ServiceType = _serviceType,
