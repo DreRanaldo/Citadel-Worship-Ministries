@@ -18,6 +18,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<PrayerRequest> PrayerRequests => Set<PrayerRequest>();
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
+    public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
+    public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<FinancialRecord> FinancialRecords => Set<FinancialRecord>();
+    public DbSet<EducationRequest> EducationRequests => Set<EducationRequest>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SpecialNote> SpecialNotes => Set<SpecialNote>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,5 +43,32 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Announcement>()
             .HasIndex(a => a.PublishDate);
+
+        builder.Entity<MemberProfile>()
+            .HasOne(m => m.User)
+            .WithOne()
+            .HasForeignKey<MemberProfile>(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Attendance>()
+            .HasIndex(a => a.ServiceDate);
+
+        builder.Entity<FinancialRecord>()
+            .HasIndex(f => f.DateRecorded);
+
+        builder.Entity<FinancialRecord>()
+            .HasIndex(f => f.RecordType);
+
+        builder.Entity<EducationRequest>()
+            .HasIndex(e => e.Status);
+
+        builder.Entity<AuditLog>()
+            .HasIndex(a => a.Timestamp);
+
+        builder.Entity<AuditLog>()
+            .HasIndex(a => a.Action);
+
+        builder.Entity<SpecialNote>()
+            .HasIndex(n => n.Category);
     }
 }

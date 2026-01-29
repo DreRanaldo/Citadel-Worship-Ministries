@@ -7,94 +7,101 @@
 @inject IAnnouncementService AnnouncementService
 @inject IPrayerRequestService PrayerRequestService
 @inject IUserService UserService
+@inject IFinancialService FinancialService
+@inject IEducationRequestService EducationRequestService
 
 <PageTitle>Admin Dashboard - Citadel Worship Ministries</PageTitle>
 
 <h2 class="mb-4"><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
 
 <!-- Stats Cards -->
-<div class="row g-4 mb-5">
-    <div class="col-md-4 col-lg-2">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm text-center bg-primary text-white">
-            <div class="card-body">
-                <i class="bi bi-book fs-3"></i>
-                <h3 class="mt-2">@_sermonCount</h3>
-                <small>Sermons</small>
+            <div class="card-body py-3">
+                <i class="bi bi-person-gear fs-4"></i>
+                <h3 class="mt-1 mb-0">@_userCount</h3>
+                <small>Users</small>
             </div>
         </div>
     </div>
-    <div class="col-md-4 col-lg-2">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm text-center bg-success text-white">
-            <div class="card-body">
-                <i class="bi bi-calendar-event fs-3"></i>
-                <h3 class="mt-2">@_eventCount</h3>
-                <small>Events</small>
+            <div class="card-body py-3">
+                <i class="bi bi-cash-stack fs-4"></i>
+                <h3 class="mt-1 mb-0">@_financialTotal.ToString("C")</h3>
+                <small>Total Giving</small>
             </div>
         </div>
     </div>
-    <div class="col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm text-center bg-info text-white">
-            <div class="card-body">
-                <i class="bi bi-people fs-3"></i>
-                <h3 class="mt-2">@_ministryCount</h3>
-                <small>Ministries</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 col-lg-2">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm text-center bg-warning text-dark">
-            <div class="card-body">
-                <i class="bi bi-megaphone fs-3"></i>
-                <h3 class="mt-2">@_announcementCount</h3>
-                <small>Announcements</small>
+            <div class="card-body py-3">
+                <i class="bi bi-mortarboard fs-4"></i>
+                <h3 class="mt-1 mb-0">@_pendingEducation</h3>
+                <small>Pending Edu Requests</small>
             </div>
         </div>
     </div>
-    <div class="col-md-4 col-lg-2">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm text-center bg-danger text-white">
-            <div class="card-body">
-                <i class="bi bi-chat-heart fs-3"></i>
-                <h3 class="mt-2">@_prayerCount</h3>
+            <div class="card-body py-3">
+                <i class="bi bi-chat-heart fs-4"></i>
+                <h3 class="mt-1 mb-0">@_prayerCount</h3>
                 <small>Prayer Requests</small>
             </div>
         </div>
     </div>
-    <div class="col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm text-center bg-dark text-white">
-            <div class="card-body">
-                <i class="bi bi-person-gear fs-3"></i>
-                <h3 class="mt-2">@_userCount</h3>
-                <small>Users</small>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-book text-primary fs-4"></i>
+                <h3 class="mt-1 mb-0">@_sermonCount</h3>
+                <small class="text-muted">Sermons</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-calendar-event text-success fs-4"></i>
+                <h3 class="mt-1 mb-0">@_eventCount</h3>
+                <small class="text-muted">Events</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-people text-info fs-4"></i>
+                <h3 class="mt-1 mb-0">@_ministryCount</h3>
+                <small class="text-muted">Ministries</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-megaphone text-warning fs-4"></i>
+                <h3 class="mt-1 mb-0">@_announcementCount</h3>
+                <small class="text-muted">Announcements</small>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Quick Actions -->
-<div class="row g-4 mb-5">
-    <div class="col-12">
-        <h4>Quick Actions</h4>
-    </div>
-    <div class="col-md-3">
-        <a href="/admin/sermons/edit/0" class="btn btn-outline-primary w-100 py-3">
-            <i class="bi bi-plus-circle"></i> New Sermon
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="/admin/events/edit/0" class="btn btn-outline-success w-100 py-3">
-            <i class="bi bi-plus-circle"></i> New Event
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="/admin/announcements/edit/0" class="btn btn-outline-warning w-100 py-3">
-            <i class="bi bi-plus-circle"></i> New Announcement
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a href="/admin/settings" class="btn btn-outline-secondary w-100 py-3">
-            <i class="bi bi-gear"></i> Site Settings
-        </a>
-    </div>
+<div class="row g-3 mb-4">
+    <div class="col-12"><h4>Quick Actions</h4></div>
+    <div class="col-md-2"><a href="/admin/sermons/edit/0" class="btn btn-outline-primary w-100 py-3"><i class="bi bi-plus-circle"></i><br/>New Sermon</a></div>
+    <div class="col-md-2"><a href="/admin/events/edit/0" class="btn btn-outline-success w-100 py-3"><i class="bi bi-plus-circle"></i><br/>New Event</a></div>
+    <div class="col-md-2"><a href="/admin/announcements/edit/0" class="btn btn-outline-warning w-100 py-3"><i class="bi bi-plus-circle"></i><br/>New Announcement</a></div>
+    <div class="col-md-2"><a href="/admin/financials" class="btn btn-outline-info w-100 py-3"><i class="bi bi-cash-stack"></i><br/>Financials</a></div>
+    <div class="col-md-2"><a href="/admin/audit-logs" class="btn btn-outline-dark w-100 py-3"><i class="bi bi-journal-text"></i><br/>Audit Logs</a></div>
+    <div class="col-md-2"><a href="/admin/settings" class="btn btn-outline-secondary w-100 py-3"><i class="bi bi-gear"></i><br/>Settings</a></div>
 </div>
 
 <!-- Recent Prayer Requests -->
@@ -142,7 +149,8 @@
 </div>
 
 @code {
-    private int _sermonCount, _eventCount, _ministryCount, _announcementCount, _prayerCount, _userCount;
+    private int _sermonCount, _eventCount, _ministryCount, _announcementCount, _prayerCount, _userCount, _pendingEducation;
+    private decimal _financialTotal;
     private List<PrayerRequest>? _recentPrayers;
 
     protected override async Task OnInitializedAsync()
@@ -164,6 +172,12 @@
 
         var users = await UserService.GetAllUsersAsync();
         _userCount = users.Count;
+
+        var summary = await FinancialService.GetSummaryAsync();
+        _financialTotal = summary.GrandTotal;
+
+        var eduRequests = await EducationRequestService.GetByStatusAsync(RequestStatus.Submitted);
+        _pendingEducation = eduRequests.Count;
     }
 
     private string GetStatusBadge(PrayerRequestStatus status) => status switch

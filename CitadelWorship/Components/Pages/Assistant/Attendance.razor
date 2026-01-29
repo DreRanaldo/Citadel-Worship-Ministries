@@ -1,0 +1,381 @@
+@page "/assistant/attendance"
+@layout AssistantLayout
+@attribute [Authorize(Roles = "AdminAssistant,Admin")]
+@using Microsoft.AspNetCore.Identity
+@inject IAttendanceService AttendanceService
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Attendance - Citadel Worship Ministries</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-clipboard-check"></i> Attendance</h2>
+        <a href="/assistant/dashboard" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-circle"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    <!-- Log Attendance Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Log Attendance</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Service Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" @bind="_serviceDate" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Service Type <span class="text-danger">*</span></label>
+                    <select class="form-select" @bind="_serviceType">
+                        <option value="">-- Select Service Type --</option>
+                        <option value="Sunday Service">Sunday Service</option>
+                        <option value="Bible Study">Bible Study</option>
+                        <option value="Special Service">Special Service</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="SubmitAttendance" disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            <span> Submit Attendance</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            @if (_isLoadingUsers)
+            {
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                    <span class="ms-2 text-muted">Loading members...</span>
+                </div>
+            }
+            else if (_allUsers?.Any() == true)
+            {
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="input-group" style="max-width:400px;">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0" placeholder="Search members..."
+                               @bind="_memberSearch" @bind:event="oninput" />
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success me-1" @onclick="SelectAll">
+                            <i class="bi bi-check-all"></i> Select All
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="DeselectAll">
+                            <i class="bi bi-x-lg"></i> Deselect All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height:400px; overflow-y:auto;">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width:50px;">Present</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in FilteredUsers)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input"
+                                               checked="@IsChecked(user.Id)"
+                                               @onchange="e => TogglePresence(user.Id, (bool)(e.Value ?? false))" />
+                                    </td>
+                                    <td>@user.FullName</td>
+                                    <td class="text-muted">@user.Email</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-2 text-muted small">
+                    <i class="bi bi-info-circle"></i> @_presentUserIds.Count of @_allUsers.Count members marked present.
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center mb-0">No members found in the system.</p>
+            }
+        </div>
+    </div>
+
+    <!-- Recent Attendance Records -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Attendance Records</h5>
+                <div class="d-flex gap-2">
+                    <input type="date" class="form-control form-control-sm" @bind="_filterStart" />
+                    <input type="date" class="form-control form-control-sm" @bind="_filterEnd" />
+                    <button class="btn btn-sm btn-outline-primary" @onclick="FilterRecords">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilter">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (_isLoadingRecords)
+            {
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                    <span class="ms-2 text-muted">Loading records...</span>
+                </div>
+            }
+            else if (_attendanceRecords?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Service Type</th>
+                                <th>Member</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in _attendanceRecords.Take(100))
+                            {
+                                <tr>
+                                    <td>@record.ServiceDate.ToString("MMM d, yyyy")</td>
+                                    <td>
+                                        <span class="badge @GetServiceTypeBadge(record.ServiceType)">
+                                            @record.ServiceType
+                                        </span>
+                                    </td>
+                                    <td>@(record.Member?.FullName ?? record.MemberName ?? "Unknown")</td>
+                                    <td>
+                                        @if (record.IsPresent)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check"></i> Present</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger"><i class="bi bi-x"></i> Absent</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center mb-0">No attendance records found for the selected period.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isLoadingUsers = true;
+    private bool _isLoadingRecords = true;
+    private bool _isSaving = false;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    // Log Attendance fields
+    private DateTime _serviceDate = DateTime.Today;
+    private string _serviceType = string.Empty;
+    private string _memberSearch = string.Empty;
+    private List<ApplicationUser>? _allUsers;
+    private HashSet<string> _presentUserIds = new();
+
+    // Records filter
+    private DateTime? _filterStart;
+    private DateTime? _filterEnd;
+    private List<Attendance>? _attendanceRecords;
+
+    private IEnumerable<ApplicationUser> FilteredUsers =>
+        (_allUsers ?? new List<ApplicationUser>())
+            .Where(u => string.IsNullOrEmpty(_memberSearch) ||
+                        u.FullName.Contains(_memberSearch, StringComparison.OrdinalIgnoreCase) ||
+                        (u.Email?.Contains(_memberSearch, StringComparison.OrdinalIgnoreCase) == true));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _allUsers = UserManager.Users.OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ToList();
+            _isLoadingUsers = false;
+
+            _attendanceRecords = await AttendanceService.GetAllAsync();
+            _isLoadingRecords = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading data: {ex.Message}";
+            _isLoadingUsers = false;
+            _isLoadingRecords = false;
+        }
+    }
+
+    private bool IsChecked(string userId) => _presentUserIds.Contains(userId);
+
+    private void TogglePresence(string userId, bool isPresent)
+    {
+        if (isPresent)
+            _presentUserIds.Add(userId);
+        else
+            _presentUserIds.Remove(userId);
+    }
+
+    private void SelectAll()
+    {
+        if (_allUsers != null)
+        {
+            foreach (var user in FilteredUsers)
+                _presentUserIds.Add(user.Id);
+        }
+    }
+
+    private void DeselectAll()
+    {
+        _presentUserIds.Clear();
+    }
+
+    private async Task SubmitAttendance()
+    {
+        if (string.IsNullOrEmpty(_serviceType))
+        {
+            _errorMessage = "Please select a service type.";
+            return;
+        }
+
+        if (_allUsers == null || !_allUsers.Any())
+        {
+            _errorMessage = "No members to record attendance for.";
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var currentUser = await GetCurrentUserAsync();
+            var records = new List<Attendance>();
+
+            foreach (var user in _allUsers)
+            {
+                records.Add(new Attendance
+                {
+                    ServiceDate = _serviceDate,
+                    ServiceType = _serviceType,
+                    MemberId = user.Id,
+                    MemberName = user.FullName,
+                    IsPresent = _presentUserIds.Contains(user.Id),
+                    RecordedByUserId = currentUser?.Id
+                });
+            }
+
+            await AttendanceService.CreateBatchAsync(records);
+
+            _successMessage = $"Attendance logged successfully for {_serviceDate:MMM d, yyyy} - {_serviceType}. {_presentUserIds.Count} present, {_allUsers.Count - _presentUserIds.Count} absent.";
+            _presentUserIds.Clear();
+            _serviceType = string.Empty;
+
+            // Refresh records
+            _attendanceRecords = await AttendanceService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error saving attendance: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task FilterRecords()
+    {
+        _isLoadingRecords = true;
+        try
+        {
+            if (_filterStart.HasValue && _filterEnd.HasValue)
+            {
+                _attendanceRecords = await AttendanceService.GetByDateRangeAsync(_filterStart.Value, _filterEnd.Value);
+            }
+            else
+            {
+                _attendanceRecords = await AttendanceService.GetAllAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error filtering records: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingRecords = false;
+        }
+    }
+
+    private async Task ClearFilter()
+    {
+        _filterStart = null;
+        _filterEnd = null;
+        _isLoadingRecords = true;
+        try
+        {
+            _attendanceRecords = await AttendanceService.GetAllAsync();
+        }
+        finally
+        {
+            _isLoadingRecords = false;
+        }
+    }
+
+    private async Task<ApplicationUser?> GetCurrentUserAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            return await UserManager.GetUserAsync(httpContext.User);
+        }
+        return null;
+    }
+
+    private string GetServiceTypeBadge(string serviceType) => serviceType switch
+    {
+        "Sunday Service" => "bg-primary",
+        "Bible Study" => "bg-info",
+        "Special Service" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+}

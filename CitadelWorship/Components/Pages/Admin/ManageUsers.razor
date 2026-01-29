@@ -37,7 +37,7 @@ else
                             <td>
                                 @foreach (var role in user.Roles)
                                 {
-                                    <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary") me-1">@role</span>
+                                    <span class="badge @(role == "Admin" ? "bg-danger" : role == "AdminAssistant" ? "bg-warning text-dark" : "bg-primary") me-1">@role</span>
                                 }
                             </td>
                             <td>@user.DateJoined.ToString("MMM d, yyyy")</td>
@@ -63,6 +63,18 @@ else
                                     {
                                         <button class="btn btn-outline-warning" title="Remove Admin" @onclick="@(() => RemoveRole(user.Id, RoleAdmin))">
                                             <i class="bi bi-shield-minus"></i>
+                                        </button>
+                                    }
+                                    @if (!user.Roles.Contains("AdminAssistant"))
+                                    {
+                                        <button class="btn btn-outline-warning" title="Make Assistant" @onclick="@(() => AssignRole(user.Id, RoleAdminAssistant))">
+                                            <i class="bi bi-person-badge"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-secondary" title="Remove Assistant" @onclick="@(() => RemoveRole(user.Id, RoleAdminAssistant))">
+                                            <i class="bi bi-person-dash"></i>
                                         </button>
                                     }
                                     @if (!user.Roles.Contains("Member"))
@@ -95,6 +107,7 @@ else
 
 @code {
     private const string RoleAdmin = "Admin";
+    private const string RoleAdminAssistant = "AdminAssistant";
     private const string RoleMember = "Member";
     private List<UserDto>? _users;
     private string? _message;

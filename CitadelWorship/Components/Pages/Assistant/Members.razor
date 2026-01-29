@@ -1,0 +1,164 @@
+@page "/assistant/members"
+@layout AssistantLayout
+@attribute [Authorize(Roles = "AdminAssistant,Admin")]
+@inject IMemberProfileService MemberProfileService
+
+<PageTitle>Members - Citadel Worship Ministries</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-people-fill"></i> Members</h2>
+        <div>
+            <a href="/assistant/dashboard" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+            <a href="/assistant/members/edit/0" class="btn btn-primary">
+                <i class="bi bi-person-plus"></i> Add Member
+            </a>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading members...</p>
+        </div>
+    }
+    else if (_members == null || !_members.Any())
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-people fs-1 text-muted"></i>
+                <h5 class="mt-3 text-muted">No members found</h5>
+                <p class="text-muted">Get started by adding a new member.</p>
+                <a href="/assistant/members/edit/0" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> Add First Member
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Search -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body py-2">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-start-0" placeholder="Search members..."
+                                   @bind="_searchTerm" @bind:event="oninput" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Visitor">Visitor</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="text-muted">@FilteredMembers.Count() member(s)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Membership Status</th>
+                            <th>Ministry Involvement</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in FilteredMembers)
+                        {
+                            <tr>
+                                <td class="fw-semibold">
+                                    <i class="bi bi-person-circle text-muted me-1"></i>
+                                    @(member.User?.FullName ?? "N/A")
+                                </td>
+                                <td>@(member.User?.Email ?? "-")</td>
+                                <td>@(member.Phone ?? "-")</td>
+                                <td>
+                                    <span class="badge @GetStatusBadge(member.MembershipStatus)">
+                                        @member.MembershipStatus
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(member.MinistryInvolvement))
+                                    {
+                                        <span class="text-truncate d-inline-block" style="max-width:200px;" title="@member.MinistryInvolvement">
+                                            @member.MinistryInvolvement
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/assistant/members/edit/@member.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private List<MemberProfile>? _members;
+    private string _searchTerm = string.Empty;
+    private string _statusFilter = string.Empty;
+
+    private IEnumerable<MemberProfile> FilteredMembers =>
+        (_members ?? new List<MemberProfile>())
+            .Where(m =>
+                (string.IsNullOrEmpty(_searchTerm) ||
+                 (m.User?.FullName?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                 (m.User?.Email?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                 (m.Phone?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) == true))
+                &&
+                (string.IsNullOrEmpty(_statusFilter) || m.MembershipStatus == _statusFilter));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _members = await MemberProfileService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading members: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetStatusBadge(string status) => status switch
+    {
+        "Active" => "bg-success",
+        "Inactive" => "bg-secondary",
+        "Visitor" => "bg-info",
+        _ => "bg-secondary"
+    };
+}

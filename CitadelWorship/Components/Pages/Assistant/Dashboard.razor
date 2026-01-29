@@ -1,0 +1,337 @@
+@page "/assistant/dashboard"
+@layout AssistantLayout
+@attribute [Authorize(Roles = "AdminAssistant,Admin")]
+@using Microsoft.AspNetCore.Identity
+@inject IMemberProfileService MemberProfileService
+@inject IAttendanceService AttendanceService
+@inject IFinancialService FinancialService
+@inject IEducationRequestService EducationRequestService
+@inject ISpecialNoteService SpecialNoteService
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Assistant Dashboard - Citadel Worship Ministries</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-speedometer2"></i> Assistant Dashboard</h2>
+            @if (_currentUser != null)
+            {
+                <p class="text-muted mb-0">Welcome back, @_currentUser.FirstName!</p>
+            }
+        </div>
+        <span class="badge bg-info fs-6"><i class="bi bi-clock"></i> @DateTime.Now.ToString("dddd, MMMM d, yyyy")</span>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading dashboard data...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                            <i class="bi bi-people-fill fs-3 text-primary"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1">@_totalMembers</h3>
+                        <p class="text-muted mb-0">Total Members</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                            <i class="bi bi-calendar-check-fill fs-3 text-success"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1">@_todayAttendance</h3>
+                        <p class="text-muted mb-0">Today's Attendance</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                            <i class="bi bi-currency-dollar fs-3 text-warning"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1">@_recentFinancialCount</h3>
+                        <p class="text-muted mb-0">Recent Financial Entries</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                            <i class="bi bi-mortarboard-fill fs-3 text-danger"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1">@_pendingEducationRequests</h3>
+                        <p class="text-muted mb-0">Pending Education Requests</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="row g-4 mb-5">
+            <div class="col-12">
+                <h4 class="mb-3"><i class="bi bi-lightning-fill text-warning"></i> Quick Actions</h4>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/members" class="btn btn-outline-primary w-100 py-3 text-decoration-none">
+                    <i class="bi bi-people d-block fs-4"></i>
+                    <small>Members</small>
+                </a>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/members/edit/0" class="btn btn-outline-success w-100 py-3 text-decoration-none">
+                    <i class="bi bi-person-plus d-block fs-4"></i>
+                    <small>Add Member</small>
+                </a>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/attendance" class="btn btn-outline-info w-100 py-3 text-decoration-none">
+                    <i class="bi bi-clipboard-check d-block fs-4"></i>
+                    <small>Attendance</small>
+                </a>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/finances/log" class="btn btn-outline-warning w-100 py-3 text-decoration-none">
+                    <i class="bi bi-cash-stack d-block fs-4"></i>
+                    <small>Log Finance</small>
+                </a>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/education-requests" class="btn btn-outline-danger w-100 py-3 text-decoration-none">
+                    <i class="bi bi-mortarboard d-block fs-4"></i>
+                    <small>Education</small>
+                </a>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <a href="/assistant/notes" class="btn btn-outline-secondary w-100 py-3 text-decoration-none">
+                    <i class="bi bi-journal-text d-block fs-4"></i>
+                    <small>Notes</small>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Activity Row -->
+        <div class="row g-4">
+            <!-- Recent Financial Entries -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-cash-coin text-success"></i> Recent Financial Entries</h5>
+                        <a href="/assistant/finances" class="btn btn-sm btn-outline-success">View All</a>
+                    </div>
+                    <div class="card-body">
+                        @if (_recentFinancials?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Type</th>
+                                            <th>Amount</th>
+                                            <th>Member</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in _recentFinancials.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@record.DateRecorded.ToString("MMM d")</td>
+                                                <td><span class="badge @GetFinanceTypeBadge(record.RecordType)">@record.RecordType</span></td>
+                                                <td class="fw-bold">@record.Amount.ToString("C")</td>
+                                                <td>@(record.Member?.FullName ?? record.MemberName ?? "Anonymous")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center mb-0">No recent financial entries.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Education Requests -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-mortarboard text-danger"></i> Pending Education Requests</h5>
+                        <a href="/assistant/education-requests" class="btn btn-sm btn-outline-danger">View All</a>
+                    </div>
+                    <div class="card-body">
+                        @if (_pendingRequests?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var request in _pendingRequests.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@request.Title</td>
+                                                <td>@request.RequestType</td>
+                                                <td><span class="badge @GetStatusBadge(request.Status)">@request.Status</span></td>
+                                                <td>@request.SubmittedAt.ToString("MMM d")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center mb-0">No pending education requests.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Notes -->
+        <div class="row g-4 mt-2">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-journal-text text-info"></i> Recent Notes</h5>
+                        <a href="/assistant/notes" class="btn btn-sm btn-outline-info">View All</a>
+                    </div>
+                    <div class="card-body">
+                        @if (_recentNotes?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Category</th>
+                                            <th>Related Member</th>
+                                            <th>Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var note in _recentNotes.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@note.Subject</td>
+                                                <td><span class="badge @GetNoteCategoryBadge(note.Category)">@note.Category</span></td>
+                                                <td>@(note.RelatedMember?.FullName ?? note.RelatedMemberName ?? "-")</td>
+                                                <td>@note.CreatedAt.ToString("MMM d, yyyy")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center mb-0">No recent notes.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private ApplicationUser? _currentUser;
+    private int _totalMembers;
+    private int _todayAttendance;
+    private int _recentFinancialCount;
+    private int _pendingEducationRequests;
+    private List<FinancialRecord>? _recentFinancials;
+    private List<EducationRequest>? _pendingRequests;
+    private List<SpecialNote>? _recentNotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                _currentUser = await UserManager.GetUserAsync(httpContext.User);
+            }
+
+            var members = await MemberProfileService.GetAllAsync();
+            _totalMembers = members.Count;
+
+            var todayRecords = await AttendanceService.GetByDateAsync(DateTime.Today);
+            _todayAttendance = todayRecords.Count(a => a.IsPresent);
+
+            _recentFinancials = await FinancialService.GetAllAsync();
+            _recentFinancialCount = _recentFinancials.Count;
+
+            var allRequests = await EducationRequestService.GetAllAsync();
+            _pendingRequests = allRequests
+                .Where(r => r.Status == RequestStatus.Submitted || r.Status == RequestStatus.InReview || r.Status == RequestStatus.Assigned)
+                .ToList();
+            _pendingEducationRequests = _pendingRequests.Count;
+
+            _recentNotes = await SpecialNoteService.GetAllAsync(includeConfidential: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard load error: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetFinanceTypeBadge(FinancialRecordType type) => type switch
+    {
+        FinancialRecordType.Tithe => "bg-primary",
+        FinancialRecordType.Offering => "bg-success",
+        FinancialRecordType.SpecialSeed => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusBadge(RequestStatus status) => status switch
+    {
+        RequestStatus.Submitted => "bg-primary",
+        RequestStatus.InReview => "bg-info",
+        RequestStatus.Assigned => "bg-warning text-dark",
+        RequestStatus.Completed => "bg-success",
+        RequestStatus.Cancelled => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    private string GetNoteCategoryBadge(NoteCategory category) => category switch
+    {
+        NoteCategory.FirstTimeVisitor => "bg-info",
+        NoteCategory.CounselingReferral => "bg-warning text-dark",
+        NoteCategory.FollowUpRequired => "bg-danger",
+        NoteCategory.General => "bg-secondary",
+        NoteCategory.Confidential => "bg-dark",
+        _ => "bg-secondary"
+    };
+}

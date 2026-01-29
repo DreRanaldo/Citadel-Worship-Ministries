@@ -15,7 +15,7 @@ public static class SeedData
         await context.Database.EnsureCreatedAsync();
 
         // Seed roles
-        string[] roles = { "Admin", "Member" };
+        string[] roles = { "Admin", "AdminAssistant", "Member" };
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -44,6 +44,27 @@ public static class SeedData
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
+
+        // Seed admin assistant user
+        var assistantEmail = "assistant@citadelworship.org";
+        if (await userManager.FindByEmailAsync(assistantEmail) == null)
+        {
+            var assistantUser = new ApplicationUser
+            {
+                UserName = assistantEmail,
+                Email = assistantEmail,
+                FirstName = "Mary",
+                LastName = "Assistant",
+                EmailConfirmed = true,
+                IsActive = true
+            };
+
+            var result = await userManager.CreateAsync(assistantUser, "Assistant@123456");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(assistantUser, "AdminAssistant");
             }
         }
 

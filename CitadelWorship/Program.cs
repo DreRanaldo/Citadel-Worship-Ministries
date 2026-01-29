@@ -49,12 +49,19 @@ builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IPrayerRequestService, PrayerRequestService>();
 builder.Services.AddScoped<ISiteSettingsService, SiteSettingsService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IMemberProfileService, MemberProfileService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IFinancialService, FinancialService>();
+builder.Services.AddScoped<IEducationRequestService, EducationRequestService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<ISpecialNoteService, SpecialNoteService>();
 
 // Authorization policies
 builder.Services.AddAuthorizationCore(options =>
 {
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("RequireMember", policy => policy.RequireRole("Member", "Admin"));
+    options.AddPolicy("RequireAdminAssistant", policy => policy.RequireRole("Admin", "AdminAssistant"));
+    options.AddPolicy("RequireMember", policy => policy.RequireRole("Member", "Admin", "AdminAssistant"));
 });
 
 builder.Services.AddCascadingAuthenticationState();

@@ -44,8 +44,11 @@ public class AccountController : Controller
                 return LocalRedirect(input.ReturnUrl);
             }
 
-            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
-            return Redirect(isAdmin ? "/admin/dashboard" : "/member/dashboard");
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+                return Redirect("/admin/dashboard");
+            if (await _userManager.IsInRoleAsync(user, "AdminAssistant"))
+                return Redirect("/assistant/dashboard");
+            return Redirect("/member/dashboard");
         }
 
         return Redirect("/account/login?error=Invalid email or password");

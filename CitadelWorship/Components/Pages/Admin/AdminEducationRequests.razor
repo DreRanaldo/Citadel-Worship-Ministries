@@ -1,0 +1,112 @@
+@page "/admin/education-requests"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IEducationRequestService EducationRequestService
+
+<PageTitle>Education Requests - Admin</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-mortarboard"></i> Education Requests</h2>
+
+<div class="mb-3">
+    <div class="btn-group">
+        <button class="btn @(_filter == null ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => FilterBy(null))">All</button>
+        <button class="btn @(_filter == RequestStatus.Submitted ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => FilterBy(RequestStatus.Submitted))">Submitted</button>
+        <button class="btn @(_filter == RequestStatus.InReview ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => FilterBy(RequestStatus.InReview))">In Review</button>
+        <button class="btn @(_filter == RequestStatus.Assigned ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => FilterBy(RequestStatus.Assigned))">Assigned</button>
+        <button class="btn @(_filter == RequestStatus.Completed ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => FilterBy(RequestStatus.Completed))">Completed</button>
+    </div>
+</div>
+
+@if (_requests == null)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (!_requests.Any())
+{
+    <div class="alert alert-info">No education requests found.</div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Submitted By</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var req in _requests)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@req.Title</strong>
+                                <br /><small class="text-muted">@req.Description</small>
+                            </td>
+                            <td><span class="badge bg-secondary">@req.RequestType</span></td>
+                            <td>@req.SubmittedByUser?.FullName</td>
+                            <td>@req.SubmittedAt.ToString("MMM d, yyyy")</td>
+                            <td><span class="badge @GetStatusBadge(req.Status)">@req.Status</span></td>
+                            <td>@req.AssignedTo</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-warning" title="In Review" @onclick="@(() => UpdateStatus(req.Id, RequestStatus.InReview))"><i class="bi bi-eye"></i></button>
+                                    <button class="btn btn-outline-success" title="Complete" @onclick="@(() => UpdateStatus(req.Id, RequestStatus.Completed))"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-outline-secondary" title="Cancel" @onclick="@(() => UpdateStatus(req.Id, RequestStatus.Cancelled))"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert alert-success mt-3 alert-dismissible fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="@(() => _message = null)"></button>
+    </div>
+}
+
+@code {
+    private List<EducationRequest>? _requests;
+    private RequestStatus? _filter;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _requests = _filter.HasValue
+            ? await EducationRequestService.GetByStatusAsync(_filter.Value)
+            : await EducationRequestService.GetAllAsync();
+    }
+
+    private async Task FilterBy(RequestStatus? status) { _filter = status; await LoadData(); }
+
+    private async Task UpdateStatus(int id, RequestStatus status)
+    {
+        await EducationRequestService.UpdateStatusAsync(id, status);
+        _message = "Request status updated.";
+        await LoadData();
+    }
+
+    private string GetStatusBadge(RequestStatus s) => s switch
+    {
+        RequestStatus.Submitted => "bg-primary",
+        RequestStatus.InReview => "bg-warning text-dark",
+        RequestStatus.Assigned => "bg-info",
+        RequestStatus.Completed => "bg-success",
+        RequestStatus.Cancelled => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

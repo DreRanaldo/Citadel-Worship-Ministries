@@ -1,0 +1,249 @@
+@page "/assistant/finances/log"
+@layout AssistantLayout
+@attribute [Authorize(Roles = "AdminAssistant,Admin")]
+@using Microsoft.AspNetCore.Identity
+@inject IFinancialService FinancialService
+@inject IAuditService AuditService
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+
+<PageTitle>Log Financial Record - Citadel Worship Ministries</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-cash-stack"></i> Log Financial Record</h2>
+        <a href="/assistant/finances" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Finances
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <div class="mt-2">
+                <a href="/assistant/finances" class="btn btn-sm btn-success me-2">
+                    <i class="bi bi-list"></i> View All Records
+                </a>
+                <a href="/assistant/finances/log" class="btn btn-sm btn-outline-success" @onclick="ResetForm">
+                    <i class="bi bi-plus-circle"></i> Log Another
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-circle"></i> @_errorMessage
+                <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Important:</strong> Financial records are immutable once submitted. Please verify all details before submitting.
+                </div>
+
+                <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="logFinanceForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" />
+
+                    <div class="row g-3">
+                        <!-- Record Type -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Record Type <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_model.RecordType">
+                                <option value="@FinancialRecordType.Tithe">Tithe</option>
+                                <option value="@FinancialRecordType.Offering">Offering</option>
+                                <option value="@FinancialRecordType.SpecialSeed">Special Seed</option>
+                            </InputSelect>
+                        </div>
+
+                        <!-- Amount -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <InputNumber class="form-control" @bind-Value="_model.Amount" placeholder="0.00" />
+                            </div>
+                            <ValidationMessage For="() => _model.Amount" class="text-danger" />
+                        </div>
+
+                        <!-- Date Recorded -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Date Recorded <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="_model.DateRecorded" />
+                        </div>
+
+                        <!-- Member (Optional) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Member <small class="text-muted">(optional - leave blank for anonymous)</small></label>
+                            <InputSelect class="form-select" @bind-Value="_model.MemberId">
+                                <option value="">-- Anonymous / Non-Member --</option>
+                                @if (_users != null)
+                                {
+                                    @foreach (var user in _users)
+                                    {
+                                        <option value="@user.Id">@user.FullName (@user.Email)</option>
+                                    }
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <!-- Member Name (for non-member) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Member Name <small class="text-muted">(for non-member giving)</small></label>
+                            <InputText class="form-control" @bind-Value="_model.MemberName" placeholder="Name if not a registered member" />
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="_model.PaymentMethod">
+                                <option value="@PaymentMethod.Cash">Cash</option>
+                                <option value="@PaymentMethod.Transfer">Transfer</option>
+                                <option value="@PaymentMethod.Cheque">Cheque</option>
+                                <option value="@PaymentMethod.Online">Online</option>
+                                <option value="@PaymentMethod.Other">Other</option>
+                            </InputSelect>
+                        </div>
+
+                        <!-- Service or Event -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Service / Event</label>
+                            <InputText class="form-control" @bind-Value="_model.ServiceOrEvent" placeholder="e.g., Sunday Service, Revival" />
+                        </div>
+
+                        <!-- Category -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Category</label>
+                            <InputText class="form-control" @bind-Value="_model.Category" placeholder="e.g., Building Fund" />
+                        </div>
+
+                        <!-- Reference Number -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Reference Number</label>
+                            <InputText class="form-control" @bind-Value="_model.ReferenceNumber" placeholder="Receipt or transaction reference" />
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Notes</label>
+                            <InputText class="form-control" @bind-Value="_model.Notes" placeholder="Additional notes" />
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/assistant/finances" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <span>Submitting...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-circle"></i>
+                                <span> Submit Record</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private FinancialRecord _model = new()
+    {
+        DateRecorded = DateTime.Today,
+        RecordType = FinancialRecordType.Tithe,
+        PaymentMethod = PaymentMethod.Cash
+    };
+
+    private List<ApplicationUser>? _users;
+    private bool _isSaving = false;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        _users = UserManager.Users.OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ToList();
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_model.Amount <= 0)
+        {
+            _errorMessage = "Amount must be greater than zero.";
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var currentUser = await GetCurrentUserAsync();
+            _model.SubmittedByUserId = currentUser?.Id ?? string.Empty;
+
+            // Clear MemberId if empty string
+            if (string.IsNullOrWhiteSpace(_model.MemberId))
+                _model.MemberId = null;
+
+            await FinancialService.CreateAsync(_model);
+
+            // Log audit trail
+            await AuditService.LogAsync(
+                "Create",
+                "FinancialRecord",
+                _model.Id.ToString(),
+                $"Logged {_model.RecordType} of {_model.Amount:C} - {_model.PaymentMethod}",
+                currentUser?.Id,
+                currentUser?.FullName
+            );
+
+            _successMessage = $"Financial record submitted successfully! {_model.RecordType} of {_model.Amount:C} recorded.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error submitting record: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _model = new FinancialRecord
+        {
+            DateRecorded = DateTime.Today,
+            RecordType = FinancialRecordType.Tithe,
+            PaymentMethod = PaymentMethod.Cash
+        };
+        _successMessage = null;
+        _errorMessage = null;
+    }
+
+    private async Task<ApplicationUser?> GetCurrentUserAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            return await UserManager.GetUserAsync(httpContext.User);
+        }
+        return null;
+    }
+}

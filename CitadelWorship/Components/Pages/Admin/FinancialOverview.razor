@@ -1,0 +1,124 @@
+@page "/admin/financials"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IFinancialService FinancialService
+
+<PageTitle>Financial Overview - Admin</PageTitle>
+
+<h2 class="mb-4"><i class="bi bi-cash-stack"></i> Financial Overview</h2>
+
+@if (_summary == null)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <h6 class="text-muted">Tithes</h6>
+                <h3 class="text-primary">@_summary.TotalTithes.ToString("C")</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <h6 class="text-muted">Offerings</h6>
+                <h3 class="text-success">@_summary.TotalOfferings.ToString("C")</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <h6 class="text-muted">Special Seeds</h6>
+                <h3 class="text-info">@_summary.TotalSpecialSeeds.ToString("C")</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <h6 class="text-muted">Grand Total</h6>
+                <h3 class="fw-bold">@_summary.GrandTotal.ToString("C")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Filter by Date</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" class="form-control" @bind="_startDate" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" @bind="_endDate" />
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary" @onclick="ApplyFilter">Apply Filter</button>
+                    <button class="btn btn-outline-secondary ms-1" @onclick="ClearFilter">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Member</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                        <th>Service/Event</th>
+                        <th>Submitted By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var record in _records)
+                    {
+                        <tr>
+                            <td>@record.DateRecorded.ToString("MMM d, yyyy")</td>
+                            <td><span class="badge @GetTypeBadge(record.RecordType)">@record.RecordType</span></td>
+                            <td>@(record.Member?.FullName ?? record.MemberName ?? "Anonymous")</td>
+                            <td class="fw-bold">@record.Amount.ToString("C")</td>
+                            <td>@record.PaymentMethod</td>
+                            <td>@record.ServiceOrEvent</td>
+                            <td>@record.SubmittedByUser?.FullName</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private FinancialSummary? _summary;
+    private List<FinancialRecord> _records = new();
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _summary = await FinancialService.GetSummaryAsync(_startDate, _endDate);
+        _records = _startDate.HasValue || _endDate.HasValue
+            ? await FinancialService.GetByDateRangeAsync(_startDate ?? DateTime.MinValue, _endDate ?? DateTime.MaxValue)
+            : await FinancialService.GetAllAsync();
+    }
+
+    private async Task ApplyFilter() => await LoadData();
+    private async Task ClearFilter() { _startDate = null; _endDate = null; await LoadData(); }
+
+    private string GetTypeBadge(FinancialRecordType t) => t switch
+    {
+        FinancialRecordType.Tithe => "bg-primary",
+        FinancialRecordType.Offering => "bg-success",
+        FinancialRecordType.SpecialSeed => "bg-info",
+        _ => "bg-secondary"
+    };
+}
