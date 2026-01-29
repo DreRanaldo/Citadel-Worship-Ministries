@@ -1,4 +1,6 @@
 @page "/give"
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
 
 <PageTitle>Give - Citadel Worship Ministries</PageTitle>
 
@@ -22,41 +24,140 @@
         </div>
 
         <div class="row g-4 justify-content-center">
-            <!-- Online Giving -->
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center">
+            <!-- Online Giving with PayPal -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h4 class="mb-0"><i class="bi bi-credit-card"></i> Give Online</h4>
+                    </div>
                     <div class="card-body p-4">
-                        <i class="bi bi-credit-card fs-1 text-primary"></i>
-                        <h4 class="mt-3">Give Online</h4>
-                        <p class="text-muted">Make a secure one-time or recurring donation through our online giving platform.</p>
-                        <button class="btn btn-primary btn-lg" disabled>
-                            <i class="bi bi-lock"></i> Give Now
-                        </button>
-                        <p class="text-muted small mt-2">(Online giving integration coming soon)</p>
+                        @if (_paymentComplete)
+                        {
+                            <div class="text-center py-4">
+                                <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3" style="width:80px;height:80px;">
+                                    <i class="bi bi-check-lg text-white display-4"></i>
+                                </div>
+                                <h4 class="text-success">Thank You!</h4>
+                                <p class="text-muted">Your gift of <strong>@_completedAmount.ToString("C")</strong> has been received.</p>
+                                <p class="text-muted small">Transaction ID: @_transactionId</p>
+                                <p>May God bless you for your generosity!</p>
+                                <button class="btn btn-outline-primary mt-3" @onclick="ResetForm">
+                                    <i class="bi bi-arrow-repeat"></i> Make Another Gift
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Gift Type</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="giftType" id="tithe" value="Tithe" @onchange="@(() => _giftType = "Tithe")" checked="@(_giftType == "Tithe")" />
+                                    <label class="btn btn-outline-primary" for="tithe">Tithe</label>
+
+                                    <input type="radio" class="btn-check" name="giftType" id="offering" value="Offering" @onchange="@(() => _giftType = "Offering")" checked="@(_giftType == "Offering")" />
+                                    <label class="btn btn-outline-primary" for="offering">Offering</label>
+
+                                    <input type="radio" class="btn-check" name="giftType" id="specialSeed" value="Special Seed" @onchange="@(() => _giftType = "Special Seed")" checked="@(_giftType == "Special Seed")" />
+                                    <label class="btn btn-outline-primary" for="specialSeed">Special Seed</label>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Amount</label>
+                                <div class="btn-group w-100 mb-2 flex-wrap" role="group">
+                                    @foreach (var amt in _presetAmounts)
+                                    {
+                                        <button type="button" class="btn @(_amount == amt ? "btn-primary" : "btn-outline-primary")"
+                                                @onclick="@(() => SetAmount(amt))">
+                                            @amt.ToString("C0")
+                                        </button>
+                                    }
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control form-control-lg" placeholder="Other amount"
+                                           min="1" step="0.01" @bind="_amount" @bind:event="oninput" />
+                                </div>
+                            </div>
+
+                            @if (_amount > 0)
+                            {
+                                <div class="alert alert-info py-2 mb-4">
+                                    <i class="bi bi-info-circle"></i>
+                                    You are giving <strong>@_amount.ToString("C")</strong> as a <strong>@_giftType</strong>
+                                </div>
+
+                                <!-- PayPal Button Container -->
+                                <div id="paypal-button-container"></div>
+
+                                <p class="text-muted small text-center mt-3">
+                                    <i class="bi bi-shield-check"></i> Secure payment powered by PayPal
+                                </p>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary text-center">
+                                    <i class="bi bi-arrow-up-circle"></i> Select or enter an amount to continue
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             </div>
 
-            <!-- In-Person -->
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center">
-                    <div class="card-body p-4">
-                        <i class="bi bi-building fs-1 text-primary"></i>
-                        <h4 class="mt-3">Give In Person</h4>
-                        <p class="text-muted">Offering baskets are available during all worship services. You can give by cash or check.</p>
-                        <p class="fw-semibold">During any service</p>
+            <!-- Other Giving Options -->
+            <div class="col-lg-6">
+                <div class="row g-4">
+                    <!-- In-Person -->
+                    <div class="col-12">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:60px;height:60px;">
+                                        <i class="bi bi-building fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Give In Person</h5>
+                                        <p class="text-muted mb-0">Offering baskets are available during all worship services. You can give by cash or check.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Mail -->
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center">
-                    <div class="card-body p-4">
-                        <i class="bi bi-envelope fs-1 text-primary"></i>
-                        <h4 class="mt-3">Give by Mail</h4>
-                        <p class="text-muted">Send checks payable to "Citadel Worship Ministries" to our church address.</p>
-                        <p class="fw-semibold">123 Faith Avenue<br />Springfield, IL 62701</p>
+                    <!-- Mail -->
+                    <div class="col-12">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:60px;height:60px;">
+                                        <i class="bi bi-envelope fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Give by Mail</h5>
+                                        <p class="text-muted mb-0">Send checks payable to "Citadel Worship Ministries"</p>
+                                        <p class="fw-semibold mb-0 small">123 Faith Avenue, Springfield, IL 62701</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer -->
+                    <div class="col-12">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:60px;height:60px;">
+                                        <i class="bi bi-bank fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Bank Transfer</h5>
+                                        <p class="text-muted mb-0">Contact the church office for bank transfer details.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -91,3 +192,69 @@
         </div>
     </div>
 </section>
+
+@code {
+    private string _giftType = "Tithe";
+    private decimal _amount = 0;
+    private decimal[] _presetAmounts = { 10, 25, 50, 100, 250, 500 };
+    private bool _paymentComplete = false;
+    private decimal _completedAmount = 0;
+    private string? _transactionId;
+    private string? _paypalClientId;
+    private bool _paypalLoaded = false;
+
+    protected override void OnInitialized()
+    {
+        _paypalClientId = Configuration["PayPal:ClientId"];
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_amount > 0 && !_paymentComplete && !string.IsNullOrEmpty(_paypalClientId) && _paypalClientId != "YOUR_PAYPAL_CLIENT_ID_HERE")
+        {
+            await LoadPayPalButtons();
+        }
+    }
+
+    private void SetAmount(decimal amount)
+    {
+        _amount = amount;
+    }
+
+    private async Task LoadPayPalButtons()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("loadPayPalButtons", _paypalClientId, _amount, _giftType,
+                DotNetObjectReference.Create(this));
+        }
+        catch
+        {
+            // PayPal script not yet loaded or error
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnPaymentSuccess(string transactionId, decimal amount)
+    {
+        _transactionId = transactionId;
+        _completedAmount = amount;
+        _paymentComplete = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnPaymentError(string error)
+    {
+        await JS.InvokeVoidAsync("alert", $"Payment failed: {error}");
+    }
+
+    private void ResetForm()
+    {
+        _paymentComplete = false;
+        _amount = 0;
+        _giftType = "Tithe";
+        _transactionId = null;
+        _completedAmount = 0;
+    }
+}
