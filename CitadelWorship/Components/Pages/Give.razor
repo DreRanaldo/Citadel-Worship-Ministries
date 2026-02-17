@@ -1,6 +1,7 @@
 @page "/give"
 @inject IConfiguration Configuration
 @inject IJSRuntime JS
+@inject IFinancialService FinancialService
 
 <PageTitle>Give - Citadel Worship Ministries</PageTitle>
 
@@ -38,7 +39,11 @@
                                     <i class="bi bi-check-lg text-white display-4"></i>
                                 </div>
                                 <h4 class="text-success">Thank You!</h4>
-                                <p class="text-muted">Your gift of <strong>@_completedAmount.ToString("C")</strong> has been received.</p>
+                                <p class="text-muted">Your gift of <strong>@_completedAmount.ToString("C")</strong> as <strong>@_completedGiftType</strong> has been received.</p>
+                                @if (!string.IsNullOrEmpty(_payerName) && _payerName != "N/A")
+                                {
+                                    <p class="text-muted small">Payer: @_payerName</p>
+                                }
                                 <p class="text-muted small">Transaction ID: @_transactionId</p>
                                 <p>May God bless you for your generosity!</p>
                                 <button class="btn btn-outline-primary mt-3" @onclick="ResetForm">
@@ -46,22 +51,36 @@
                                 </button>
                             </div>
                         }
+                        else if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+                            </div>
+                            <button class="btn btn-outline-primary" @onclick="ResetForm">
+                                <i class="bi bi-arrow-repeat"></i> Try Again
+                            </button>
+                        }
                         else
                         {
+                            <!-- Step 1: Select Gift Type -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">Gift Type</label>
                                 <div class="btn-group w-100" role="group">
-                                    <input type="radio" class="btn-check" name="giftType" id="tithe" value="Tithe" @onchange="@(() => _giftType = "Tithe")" checked="@(_giftType == "Tithe")" />
+                                    <input type="radio" class="btn-check" name="giftType" id="tithe"
+                                           checked="@(_giftType == "Tithe")" @onchange="@(() => OnFormChanged("Tithe"))" />
                                     <label class="btn btn-outline-primary" for="tithe">Tithe</label>
 
-                                    <input type="radio" class="btn-check" name="giftType" id="offering" value="Offering" @onchange="@(() => _giftType = "Offering")" checked="@(_giftType == "Offering")" />
+                                    <input type="radio" class="btn-check" name="giftType" id="offering"
+                                           checked="@(_giftType == "Offering")" @onchange="@(() => OnFormChanged("Offering"))" />
                                     <label class="btn btn-outline-primary" for="offering">Offering</label>
 
-                                    <input type="radio" class="btn-check" name="giftType" id="specialSeed" value="Special Seed" @onchange="@(() => _giftType = "Special Seed")" checked="@(_giftType == "Special Seed")" />
+                                    <input type="radio" class="btn-check" name="giftType" id="specialSeed"
+                                           checked="@(_giftType == "Special Seed")" @onchange="@(() => OnFormChanged("Special Seed"))" />
                                     <label class="btn btn-outline-primary" for="specialSeed">Special Seed</label>
                                 </div>
                             </div>
 
+                            <!-- Step 2: Select Amount -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">Amount</label>
                                 <div class="btn-group w-100 mb-2 flex-wrap" role="group">
@@ -76,21 +95,43 @@
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control form-control-lg" placeholder="Other amount"
-                                           min="1" step="0.01" @bind="_amount" @bind:event="oninput" />
+                                           min="1" step="0.01" value="@(_amount > 0 ? _amount.ToString() : "")"
+                                           @onchange="OnAmountChanged" />
                                 </div>
                             </div>
 
                             @if (_amount > 0)
                             {
-                                <div class="alert alert-info py-2 mb-4">
+                                <div class="alert alert-info py-2 mb-3">
                                     <i class="bi bi-info-circle"></i>
                                     You are giving <strong>@_amount.ToString("C")</strong> as a <strong>@_giftType</strong>
                                 </div>
 
-                                <!-- PayPal Button Container -->
-                                <div id="paypal-button-container"></div>
+                                @if (!_showPayPal)
+                                {
+                                    <!-- Step 3: Proceed button to load PayPal -->
+                                    <button class="btn btn-primary btn-lg w-100" @onclick="ProceedToPayment">
+                                        <i class="bi bi-paypal"></i> Proceed to Pay with PayPal
+                                    </button>
+                                }
+                                else
+                                {
+                                    <!-- Step 4: PayPal buttons -->
+                                    <div class="mb-2 text-center">
+                                        <small class="text-muted">
+                                            Paying <strong>@_lockedAmount.ToString("C")</strong> — @_lockedGiftType
+                                            <button class="btn btn-sm btn-link p-0 ms-1" @onclick="ChangeAmount">Change</button>
+                                        </small>
+                                    </div>
+                                    <div id="paypal-button-container">
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                                            <span class="ms-2 text-muted">Loading PayPal...</span>
+                                        </div>
+                                    </div>
+                                }
 
-                                <p class="text-muted small text-center mt-3">
+                                <p class="text-muted small text-center mt-3 mb-0">
                                     <i class="bi bi-shield-check"></i> Secure payment powered by PayPal
                                 </p>
                             }
@@ -197,64 +238,148 @@
     private string _giftType = "Tithe";
     private decimal _amount = 0;
     private decimal[] _presetAmounts = { 10, 25, 50, 100, 250, 500 };
+
+    // PayPal state
+    private bool _showPayPal = false;
+    private decimal _lockedAmount = 0;
+    private string _lockedGiftType = "Tithe";
+    private string? _paypalClientId;
+
+    // Completion state
     private bool _paymentComplete = false;
     private decimal _completedAmount = 0;
+    private string? _completedGiftType;
     private string? _transactionId;
-    private string? _paypalClientId;
-    private bool _paypalLoaded = false;
+    private string? _payerName;
+    private string? _errorMessage;
 
     protected override void OnInitialized()
     {
         _paypalClientId = Configuration["PayPal:ClientId"];
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_amount > 0 && !_paymentComplete && !string.IsNullOrEmpty(_paypalClientId) && _paypalClientId != "YOUR_PAYPAL_CLIENT_ID_HERE")
-        {
-            await LoadPayPalButtons();
-        }
-    }
-
     private void SetAmount(decimal amount)
     {
         _amount = amount;
+        _showPayPal = false; // Reset PayPal when amount changes
     }
 
-    private async Task LoadPayPalButtons()
+    private void OnAmountChanged(ChangeEventArgs e)
     {
-        try
+        if (decimal.TryParse(e.Value?.ToString(), out var amount))
         {
-            await JS.InvokeVoidAsync("loadPayPalButtons", _paypalClientId, _amount, _giftType,
-                DotNetObjectReference.Create(this));
+            _amount = amount;
         }
-        catch
+        _showPayPal = false;
+    }
+
+    private void OnFormChanged(string giftType)
+    {
+        _giftType = giftType;
+        _showPayPal = false; // Reset PayPal when gift type changes
+    }
+
+    private async Task ProceedToPayment()
+    {
+        if (_amount <= 0) return;
+
+        if (string.IsNullOrEmpty(_paypalClientId) || _paypalClientId == "YOUR_PAYPAL_CLIENT_ID_HERE")
         {
-            // PayPal script not yet loaded or error
+            _errorMessage = "PayPal is not configured. Please set the PayPal Client ID in appsettings.json.";
+            return;
         }
+
+        // Lock in the amount and type
+        _lockedAmount = _amount;
+        _lockedGiftType = _giftType;
+        _showPayPal = true;
+
+        // Wait for Blazor to render the container div, then load PayPal
+        await Task.Yield();
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_showPayPal && !_paymentComplete)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("loadPayPalButtons",
+                    _paypalClientId, _lockedAmount, _lockedGiftType,
+                    DotNetObjectReference.Create(this));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PayPal load error: {ex.Message}");
+            }
+            _showPayPal = false; // Prevent re-rendering buttons on next render
+        }
+    }
+
+    private void ChangeAmount()
+    {
+        _showPayPal = false;
     }
 
     [JSInvokable]
-    public async Task OnPaymentSuccess(string transactionId, decimal amount)
+    public async Task OnPaymentSuccess(string transactionId, decimal amount, string payerName, string payerEmail)
     {
         _transactionId = transactionId;
         _completedAmount = amount;
+        _completedGiftType = _lockedGiftType;
+        _payerName = payerName;
         _paymentComplete = true;
+
+        // Log the transaction to FinancialRecords
+        try
+        {
+            var recordType = _lockedGiftType switch
+            {
+                "Tithe" => FinancialRecordType.Tithe,
+                "Offering" => FinancialRecordType.Offering,
+                "Special Seed" => FinancialRecordType.SpecialSeed,
+                _ => FinancialRecordType.Offering
+            };
+
+            var record = new FinancialRecord
+            {
+                RecordType = recordType,
+                Amount = amount,
+                PaymentMethod = PaymentMethod.Online,
+                MemberName = payerName != "N/A" ? payerName : null,
+                Notes = $"PayPal Transaction: {transactionId} | Payer: {payerEmail}",
+                DateRecorded = DateTime.UtcNow
+            };
+
+            await FinancialService.CreateAsync(record);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to log transaction: {ex.Message}");
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
     public async Task OnPaymentError(string error)
     {
-        await JS.InvokeVoidAsync("alert", $"Payment failed: {error}");
+        _errorMessage = error;
+        _showPayPal = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ResetForm()
     {
         _paymentComplete = false;
+        _showPayPal = false;
         _amount = 0;
         _giftType = "Tithe";
         _transactionId = null;
         _completedAmount = 0;
+        _completedGiftType = null;
+        _payerName = null;
+        _errorMessage = null;
     }
 }
